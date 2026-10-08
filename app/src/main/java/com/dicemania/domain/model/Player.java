@@ -19,3 +19,6 @@ public class Player {
     // Setter para podermos atualizar a pontuação no final do jogo
     public void setPlayerScore(int score) { this.playerScore = score; }
 }
+
+
+
