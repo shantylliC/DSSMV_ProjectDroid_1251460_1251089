@@ -15,7 +15,7 @@ import retrofit2.http.Query;
 
             @Query("category") int category,
 
-            @Query("type") int type
+            @Query("type") String type
 
                                             );
 

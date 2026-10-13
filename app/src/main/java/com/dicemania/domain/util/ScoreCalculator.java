@@ -6,9 +6,10 @@ public class ScoreCalculator {
     public static int calculate(int timeRemainingSeconds, int currentStreak) {
         if (timeRemainingSeconds <= 0) return 0; // Se o tempo acabou, 0 pontos
 
-        int basePoints = timeRemainingSeconds * 10;
+        int basePoints = 10;
+        int timeBonus =  timeRemainingSeconds * 15;
         int streakBonus = currentStreak * 25; // Ganha 25 pontos extra por cada acerto consecutivo
 
-        return basePoints + streakBonus;
+        return basePoints + timeBonus + streakBonus;
     }
 }

@@ -7,20 +7,30 @@ public class Question {
     private QuestionType type;
     private String text;
     private String correctAnswer;
-    private List<String> shuffledOptions;
+    private List<String> respostasMisturadas;
 
-    public Question(Category category, QuestionType type, String text, String correctAnswer, List<String> shuffledOptions) {
+    public Question(Category category, QuestionType type, String text, String correctAnswer, List<String> respostasMisturadas) {
         this.category = category;
         this.type = type;
         this.text = text;
         this.correctAnswer = correctAnswer;
-        this.shuffledOptions = shuffledOptions;
+        this.respostasMisturadas = respostasMisturadas;
     }
 
     // Getters para a interface ler a pergunta e desenhar os botões
-    public Category getCategory() { return category; }
-    public QuestionType getType() { return type; }
-    public String getText() { return text; }
-    public String getCorrectAnswer() { return correctAnswer; }
-    public List<String> getShuffledOptions() { return shuffledOptions; }
+    public Category getCategory() {
+        return category;
+    }
+    public QuestionType getType() {
+        return type;
+    }
+    public String getText() {
+        return text;
+    }
+    public String getCorrectAnswer() {
+        return correctAnswer;
+    }
+    public List<String> getRespostasMisturadas() {
+        return respostasMisturadas;
+    }
 }
