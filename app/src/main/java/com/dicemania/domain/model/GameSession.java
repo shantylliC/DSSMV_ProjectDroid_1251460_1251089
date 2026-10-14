@@ -3,13 +3,15 @@ package com.dicemania.domain.model;
 import com.dicemania.domain.util.ScoreCalculator;
 import java.util.List;
 
-public class GameSession {
-    private Player player;
-    private int currentQuestionIndex; // Vai de 0 a 15
-    private int currentStreak;
-    private int totalScore;
-    private GameState state;
-    private List<Question> currentBlock;
+public class GameSession { // variaveis privadas, intocáveis pelos restantes ficheiros sem ter autorizaçao
+    private Player player; // guarda a identidade de quem joga (ID e nome). Vem do ficheiro Player e é criado atrvés da inserçao do layout, as credenciais do jogador
+    private int currentQuestionIndex; // contador das questoes, vai de 0 a 14 (verdadeiramente do 1 ao 15) // Nasce dentro do proprio construtor gameSession, garantindo que o jogo começe limpo
+    private int currentStreak; // Quantas perguntas o jogodor tem acertados de seguida // Nasce dentro do proprio construtor gameSession, garantindo que o jogo começe limpo
+    private int totalScore; // pontuaçao total acumulada durante a partida // Nasce dentro do proprio construtor gameSession, garantindo que o jogo começe limpo
+    private GameState state; //Guarda o estado atual do jogo // Vem do ficheiro GameState, instancia-se diretamente no construtor, começando no Waiting_for_roll
+    private List<Question> currentBlock; // a lista que contém as 3 perguntas, e as suas respetivas respostas, dependendo do seu tipo
+    // IMPORTANTE!!!: esta lista é a mesma que aparece no ficheiro RetrofitQuestionRepository, tendo o molde criado no ficheiro Question, o tal perguntasLimpas que está no fim e que retorna o ficheiro
+
 
     // O Construtor: Prepara o jogo assim que o jogador entra
     public GameSession(Player player) {
@@ -64,10 +66,19 @@ public class GameSession {
     }
 
     // --- Getters para os ecrãs do Android poderem ler a informação ---
-    public Player getPlayer() { return player; }
-    public int getCurrentQuestionIndex() { return currentQuestionIndex; }
-    public int getCurrentStreak() { return currentStreak; }
-    public int getTotalScore() { return totalScore; }
-    public GameState getState() { return state; }
-    public List<Question> getCurrentBlock() { return currentBlock; }
+    public Player getPlayer() {
+        return player;
+    }
+    public int getCurrentQuestionIndex() {
+        return currentQuestionIndex;
+    }
+    public int getCurrentStreak() {
+        return currentStreak;
+    }
+    public int getTotalScore() {
+        return totalScore; }
+    public GameState getState() {
+        return state; }
+    public List<Question> getCurrentBlock() {
+        return currentBlock; }
 }

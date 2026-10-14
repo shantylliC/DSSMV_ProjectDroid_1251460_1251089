@@ -19,15 +19,19 @@ public class Question {
 
     // Getters para a interface ler a pergunta e desenhar os botões
     public Category getCategory() {
+
         return category;
     }
     public QuestionType getType() {
+
         return type;
     }
     public String getText() {
+
         return text;
     }
     public String getCorrectAnswer() {
+
         return correctAnswer;
     }
     public List<String> getRespostasMisturadas() {

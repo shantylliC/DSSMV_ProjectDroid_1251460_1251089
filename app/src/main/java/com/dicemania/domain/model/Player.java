@@ -12,12 +12,21 @@ public class Player {
     }
 
     // Getters para permitir a leitura dos dados
-    public String getId() { return id; }
-    public String getNickname() { return nickname; }
-    public int getPlayerScore() { return playerScore; }
+    public String getId() {
+        return id;
+    }
+    public String getNickname() {
+        return nickname;
+    }
+    public int getPlayerScore() {
+        return playerScore;
+    }
 
     // Setter para podermos atualizar a pontuação no final do jogo
-    public void setPlayerScore(int score) { this.playerScore = score; }
+    public void setPlayerScore(int score) {
+        this.playerScore = score;
+    }
+
 }
 
 
