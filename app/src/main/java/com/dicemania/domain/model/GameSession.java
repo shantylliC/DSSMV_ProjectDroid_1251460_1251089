@@ -1,9 +1,12 @@
 package com.dicemania.domain.model;
 
+import com.dicemania.domain.repository.ShakeCallback;
+import com.dicemania.domain.repository.ShakeSensor;
+
 import com.dicemania.domain.util.ScoreCalculator;
 import java.util.List;
 
-public class GameSession { // variaveis privadas, intocáveis pelos restantes ficheiros sem ter autorizaçao
+public class GameSession implements ShakeCallback { // variaveis privadas, intocáveis pelos restantes ficheiros sem ter autorizaçao
     private Player player; // guarda a identidade de quem joga (ID e nome). Vem do ficheiro Player e é criado atrvés da inserçao do layout, as credenciais do jogador
     private int currentQuestionIndex; // contador das questoes, vai de 0 a 14 (verdadeiramente do 1 ao 15) // Nasce dentro do proprio construtor gameSession, garantindo que o jogo começe limpo
     private int currentStreak; // Quantas perguntas o jogodor tem acertados de seguida // Nasce dentro do proprio construtor gameSession, garantindo que o jogo começe limpo
@@ -12,18 +15,39 @@ public class GameSession { // variaveis privadas, intocáveis pelos restantes fi
     private List<Question> currentBlock; // a lista que contém as 3 perguntas, e as suas respetivas respostas, dependendo do seu tipo
     // IMPORTANTE!!!: esta lista é a mesma que aparece no ficheiro RetrofitQuestionRepository, tendo o molde criado no ficheiro Question, o tal perguntasLimpas que está no fim e que retorna o ficheiro
 
+    private ShakeSensor shakeSensor; // Temos aqui o contrato com o hardware
 
     // O Construtor: Prepara o jogo assim que o jogador entra, instanciando estas variaveis
-    public GameSession(Player player) {
+    public GameSession(Player player, ShakeSensor shakeSensor) {
         this.player = player;
         this.currentQuestionIndex = 0;
         this.currentStreak = 0;
         this.totalScore = 0;
         this.state = GameState.WAITING_FOR_ROLL; // Passo 2: À espera que agite o telemóvel
 
+        this.shakeSensor = shakeSensor; // guardo o motor fisico, aqui guarda-se o acesso ao motor
+        this.shakeSensor.startListening(this); // mal a partida começa, o sensor deve ser ligado e quem vai receber o aviso (this) vai ser a própria activity, GameSession
+
     }
 
-    // Chamado quando o jogador agita o telemovel, o ShakeSensor dispara e o Question devolve 3 perguntas
+    // momento em que o GameSession recebe os movimentos do telemovel, o tal abanao
+    @Override // Aqui vai ser entregado a mensagem desse abanao // está a cumprir-se o contrato estabelecido no ShakeCallback
+    public void onShakeDetected (){
+
+        if (this.state == GameState.WAITING_FOR_ROLL){ // só passamos em frente se o estado do jogo estiver em esperar o abanao do jogador
+
+            this.shakeSensor.stopListening(); // vai ao hardware e desliga o acelerómetro
+            //este vai ser desligado depois do primeiro abanao, assim nao se pedem milhares de perguntas a API por cada abanao desncessário
+            // também ajuda na poupança de bateria
+            // só voltará a ser ligado depois de o jogador ter respondido ao um bloco de perguntas. 3 perguntas
+        }
+
+
+
+    }
+
+
+    // Chamado quando o jogador agita o telemovel, depois de passar o if de cima, o ShakeSensor dispara e o Question devolve 3 perguntas
     // estas 3 perguntas seram guardadas na variavel chamada de current block
     public void startNewBlock(List<Question> questions) {
         this.currentBlock = questions; // no currentBlock, variavel temporal, estao as 3 perguntas, e as suas respostas, que o jogador tem de responder
@@ -62,9 +86,14 @@ public class GameSession { // variaveis privadas, intocáveis pelos restantes fi
 
         currentQuestionIndex++; // aumento constante até atingir a pergunta 15 (verdadeiramente até o 14, pois vai de 0 a 14)
 
+
         if (currentQuestionIndex >= 15) {// fazemos >= 15 como segurança, caso haja um bug e o jogador conseguir fazer com uqe exista um 16,17,.. questao, o programa nao crasha
 
             state = GameState.FINISHED; // coloca logo o estado de: Acabou o jogo, ficando pronto para que esta partida seja enviada para a base de dados (SupaBase)
+
+
+            shakeSensor.stopListening(); // ainda mais segurança. Garantimos que o sensor ficque desligado depois de acabar a apartida
+
 
         } else if (currentQuestionIndex % 3 == 0) { // Com isto o jogo sabe quando se passaram 3 perguntas, ou seja, um bloco de questoes.
             // o % serve para calcular o resto duma divisao, o que significa que para sabermos que um bloco de questoes passou, temos de dividir o numero de questoes atuais entre 3 e dessa divisao devmos ter o resto 0. Exemplo: 1% 3 nao é zero - avança, 2 % 3 nao é zero - avança, 3 % 3 é zero modamos de estado e assim sucessivamente até serem atinguidos os 5 blocos pretendidos
@@ -82,6 +111,8 @@ public class GameSession { // variaveis privadas, intocáveis pelos restantes fi
         this.totalScore += 15000;
         this.currentQuestionIndex = 15;
         this.state = GameState.FINISHED;
+        this.shakeSensor.stopListening(); // ao forºar o fim duma partida o sensor deve estar desligado
+
     }
 
     // --- Getters para os ecrãs do Android poderem ler a informação --- Sao a encapsulaçao, podem ver mas nao podem tocar/alterar

@@ -1,7 +1,7 @@
 package com.dicemania.domain.repository;
 
 
-//Vai ligar-se ao ficheiro do AndoridShakeSensor (o matematico que se comunica com o hardware), a nossa Activity (GameSession) que fará o pedido ao sensor quando o estado for WAITNF_FOR_ROLL e com o ShakeCallback que será quem avisa, a campainha, quando o sensor detetar movimento
+//Vai ligar-se ao ficheiro do AndroidShakeSensor (o matematico que se comunica com o hardware), a nossa Activity (GameSession) que fará o pedido ao sensor quando o estado for WAITING_FOR_ROLL e com o ShakeCallback que será quem avisa, a campainha, quando o sensor detetar movimento
 public interface ShakeSensor { // o contrato de interface pura, a base arquitetural do hardware, sensor
     // dita as regras que o sensor deve seguir
 
