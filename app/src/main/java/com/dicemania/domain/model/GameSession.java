@@ -40,6 +40,8 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
             //este vai ser desligado depois do primeiro abanao, assim nao se pedem milhares de perguntas a API por cada abanao desncessário
             // também ajuda na poupança de bateria
             // só voltará a ser ligado depois de o jogador ter respondido ao um bloco de perguntas. 3 perguntas
+
+            android.util.Log.d("TESTE_SENSOR", "GameSession recebeu a notificaçao de que o telemovel abanou. Sesnor desligado com Sucesso");
         }
 
 

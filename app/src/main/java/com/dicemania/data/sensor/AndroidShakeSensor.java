@@ -116,6 +116,8 @@ public class AndroidShakeSensor implements ShakeSensor, SensorEventListener { //
 
             // se chegamos aqui, significa que o abanao é válido e respeitou a janela de descanso de meio segundo
             shakeTimeStamp = now; // atualiza-se a mameoria com a hora do abanao atual (aquele feito agora mesmo) para assim bloquear novos disparos, campainhas do telemovel a avisar, no meio segundo seguinte
+
+            android.util.Log.d("TESTE_SENSOR", "Telemovel a abanarcom força:" + gForce);
             callback.onShakeDetected(); //chamamos ao detetor de abanao, campainha
             //a fisica acaba aqui e o dominio do jogo entra em açao, ativando-se a maquina de estados para ligar o temporizador e descarregar as perguntas do api
 

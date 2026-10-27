@@ -14,6 +14,10 @@ import com.dicemania.domain.model.Question;
 import com.dicemania.data.network.RetrofitQuestionRepository;
 import com.dicemania.domain.model.QuestionType;
 
+import com.dicemania.data.sensor.AndroidShakeSensor;
+import com.dicemania.domain.model.GameSession;
+import com.dicemania.domain.model.Player;
+
 import java.util.List;
 
 
@@ -28,7 +32,23 @@ public class MainActivity extends AppCompatActivity {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
+
+
         });
+
+
+         // --- CÓDIGO DE TESTE DO ACELERÓMETRO ---
+
+         // 1. Criamos um jogador falso
+            Player jogadorTeste = new Player("1", "Visitante", 0);
+
+        // 2. Criamos o motor físico dando-lhe a MainActivity como passaporte (Context)
+            AndroidShakeSensor motorFisico = new AndroidShakeSensor(this);
+
+        // 3. Criamos a sessão de jogo, que vai ligar o motor automaticamente no construtor
+            GameSession sessaoTeste = new GameSession(jogadorTeste, motorFisico);
+
+            android.util.Log.d("TESTE_SENSOR", "App arrancou e motor foi ligado!");
 
 
                 // --- DAQUI PARA BAIXO É O NOSSO TESTE ---
