@@ -5,7 +5,7 @@ import com.dicemania.domain.model.Question;
 import com.dicemania.domain.model.QuestionType;
 import java.util.List;
 
-
+// quem terá todas as perguntas e respostas já limpinhas do RetrofitQuestionRepository. Só quando cheguem aqui é que poderam ser usadas
 
 public interface QuestionRepository {
 

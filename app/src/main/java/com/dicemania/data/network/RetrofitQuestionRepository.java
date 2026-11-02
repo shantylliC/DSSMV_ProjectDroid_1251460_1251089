@@ -25,11 +25,16 @@ public class RetrofitQuestionRepository implements QuestionRepository {
 
                 .baseUrl("https://opentdb.com/") // aqui é colocado a maior parte do link da API, esta funçao serve para guardar a morada principal e fixa do servidor. O retrofit precisa desta morada inicial para poder começar a procurar – o destino final deste link esta na OpentTDBapi (openTBD.hbh)
 
-                .addConverterFactory(GsonConverterFactory.create()) // esta alinha pega na funçao addConverterFactory e cria a funçao GsonConverterFactory que, quando receba as mensagens da API, vai fazer a traduçao de todo o texto, que vem no formato Gson, e vai traduzi-lo e separá-lo para os objetos que o nosso programa vai usar e possa entender (category, type,…)
+                .addConverterFactory(GsonConverterFactory.create()) // esta alinha pega na funçao addConverterFactory e invoca a funçao GsonConverterFactory que, quando receba as mensagens da API, vai fazer a traduçao de todo o texto, que vem no formato JSON, e vai traduzi-lo e separá-lo para os objetos que o nosso programa vai usar e possa entender (category, type,…)
 
                 .build(); // constroi tudo a partir das coisas ja feitas atrás
 
         api = retrofit.create(OpenTDBapi.class);  //esta variavel API vai guardar ao nosso construtor acima instanciado, vai guardar o produto final que a máquina do Retrofit acabou de construir . Vai criar um objeto do tipo OpenTDBapi e vai fazer o que foi explícito nesse ficheiro, o tal contrato feito com a interfase, este vai ter a responsabilidade de fazer o que está lá a acontecer. É este que vai fazer o pedido diretamente ao servidor, trazendo tudo o que for preciso. É como o telefone do programa, os ficheiros vão pedir que contacte com o servidor e este devolverá o que lhe foi dito pelo mesmo.
+        // acaba por ser uma maquina que vai imprimir e pedir tudo o que vier desde o servidor, perguntas e respostas (obtém-se estes links através do ficheiro OpenTDBapi)
+        // retrofit.create: precisamos de criar algo com as informaçoes que temos va variavel retrofit
+        // OpenTDBapi: vamos criar algo com base nas informaçoes deste ficheiro. Pedimos para que crie uma maquina que saiba fazer os pedidos que estao explicitos aí
+        // .class: como a SupaBaseApi é um ficheiro de interfase, este pode ser considerado como um ficheiro imaginário, já que é um contrato de regras, logo nao tem corpo físico. Isto leva a que nao seja possivel criarmos um objeto a partir dele, entao, precisamos utilizar o operador .class que diz ao Java que nao está a dar um objeto real e vivo, está a dar uma definiçao estrutural deste ficheiro (Type reference). o Retrofit pega nisto e faz um Reflection, onde o c+odigo consegue ler-se a si próprio e analisa todas as anotaçoes do ficheiro
+
     }
 
     @Override // pega na funçao, contrato, explicito no ficheiro openTDBapi e pode ser usada neste ficheiro
