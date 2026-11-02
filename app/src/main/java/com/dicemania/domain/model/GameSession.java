@@ -1,5 +1,7 @@
 package com.dicemania.domain.model;
 
+
+import com.dicemania.domain.repository.LeaderboardRepository;
 import com.dicemania.domain.repository.ShakeCallback;
 import com.dicemania.domain.repository.ShakeSensor;
 
@@ -15,10 +17,11 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
     private List<Question> currentBlock; // a lista que contém as 3 perguntas, e as suas respetivas respostas, dependendo do seu tipo
     // IMPORTANTE!!!: esta lista é a mesma que aparece no ficheiro RetrofitQuestionRepository, tendo o molde criado no ficheiro Question, o tal perguntasLimpas que está no fim e que retorna o ficheiro
 
-    private ShakeSensor shakeSensor; // Temos aqui o contrato com o hardware
+    private ShakeSensor shakeSensor;
+    private LeaderboardRepository leaderboardRepository; // temos aqui o contrato com as informaçoes do jogador
 
     // O Construtor: Prepara o jogo assim que o jogador entra, instanciando estas variaveis
-    public GameSession(Player player, ShakeSensor shakeSensor) {
+    public GameSession(Player player, ShakeSensor shakeSensor, LeaderboardRepository leaderboardRepository) {
         this.player = player;
         this.currentQuestionIndex = 0;
         this.currentStreak = 0;
@@ -27,6 +30,8 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
 
         this.shakeSensor = shakeSensor; // guardo o motor fisico, aqui guarda-se o acesso ao motor
         this.shakeSensor.startListening(this); // mal a partida começa, o sensor deve ser ligado e quem vai receber o aviso (this) vai ser a própria activity, GameSession
+
+        this.leaderboardRepository = leaderboardRepository; // guarda o repositório entregue pelo ecra
 
     }
 
@@ -51,7 +56,7 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
 
     // Chamado quando o jogador agita o telemovel, depois de passar o if de cima, o ShakeSensor dispara e o Question devolve 3 perguntas
     // estas 3 perguntas seram guardadas na variavel chamada de current block
-    public void startNewBlock(List<Question> questions) {
+    public void startNewBlock (List<Question> questions) {
         this.currentBlock = questions; // no currentBlock, variavel temporal, estao as 3 perguntas, e as suas respostas, que o jogador tem de responder
         this.state = GameState.IN_BREAK; // Quando currentBlock tiver as questoes, este vai mudar o estado do jogo para in_break, o que permitirá entrar a aplicaçao naquele descanso de 5 segundos entre o ecra de laçamento dos dados e aquela de responder as questoes, ou seja, acabará por ser o ecra em que se vai ver o numero da questao e o tipo de pergunta que vamos fazer
 
@@ -97,6 +102,21 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
             shakeSensor.stopListening(); // ainda mais segurança. Garantimos que o sensor ficque desligado depois de acabar a apartida
 
 
+            if (leaderboardRepository != null) {
+
+                // se o jogo acabou, respondeu a 15 perguntas, vamos colocar o id, nickname e score do jogador no repositório, que os vai embrular, tornar, transformar num onejto do tipo playerJson e os vai mandar por background, ou seja, via retrofit para o servidor, Supabase
+
+                leaderboardRepository.submitScore(
+
+                        player.getId(),
+                        player.getNickname(),
+                        totalScore
+
+                );
+
+            }
+
+
         } else if (currentQuestionIndex % 3 == 0) { // Com isto o jogo sabe quando se passaram 3 perguntas, ou seja, um bloco de questoes.
             // o % serve para calcular o resto duma divisao, o que significa que para sabermos que um bloco de questoes passou, temos de dividir o numero de questoes atuais entre 3 e dessa divisao devmos ter o resto 0. Exemplo: 1% 3 nao é zero - avança, 2 % 3 nao é zero - avança, 3 % 3 é zero modamos de estado e assim sucessivamente até serem atinguidos os 5 blocos pretendidos
 
@@ -113,9 +133,28 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
         this.totalScore += 15000;
         this.currentQuestionIndex = 15;
         this.state = GameState.FINISHED;
-        this.shakeSensor.stopListening(); // ao forºar o fim duma partida o sensor deve estar desligado
+        this.shakeSensor.stopListening(); // ao forçar o fim duma partida o sensor deve estar desligado
+
+        if (leaderboardRepository != null) {
+
+            //se forçarmos o fim do jogo por batota temos de enviar esta pontuaçao ao servidor
+            // estas pontuaçoes de testes devem ser apagadas depois no servidor da Supabase
+
+            leaderboardRepository.submitScore(
+
+                    player.getId(),
+                    player.getNickname(),
+                    totalScore
+
+            );
+
+        }
 
     }
+
+
+
+
 
     // --- Getters para os ecrãs do Android poderem ler a informação --- Sao a encapsulaçao, podem ver mas nao podem tocar/alterar
     public Player getPlayer() {
@@ -131,12 +170,17 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
         return currentStreak;
     }
     public int getTotalScore() {
+
         return totalScore;
     }
     public GameState getState() {
+
         return state;
     }
     public List<Question> getCurrentBlock() {
+
         return currentBlock;
     }
+
 }
+
