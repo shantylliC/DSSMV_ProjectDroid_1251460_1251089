@@ -10,7 +10,11 @@
     <color name="red">#EC3024</color>
     <color name="pink">#FDB8D9</color>
     <color name="beige">#FFEEE4</color>
-    <color name="castanho">#6D412A</color>
+    <color name="brown">#6D412A</color>
+    <color name="darkblue">#00125C</color>
+    <color name="gold1">#ffff94</color>
+    <color name="gold2">#f9db5c</color>
+    <color name="gold3">#efb810</color>
     <color name="streak1">#CA5CDD</color>
     <color name="streak2">#BE2ED6</color>
     <color name="streak3">#B100CD</color>

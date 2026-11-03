@@ -67,7 +67,7 @@ public class LeaderboardActivity extends AppCompatActivity {
             public View getView(int position, View convertView,
                                 android.view.ViewGroup parent) {
                 TextView row = (TextView) super.getView(position, convertView, parent);
-                row.setTextColor(getColor(R.color.castanho));
+                row.setTextColor(getColor(R.color.beige));
                 row.setTextSize(18);
                 row.setPadding(16, 20, 16, 20);
                 return row;
