@@ -28,6 +28,9 @@ import java.util.UUID; // Para gerar um ID falso no teste
 
 public class MainActivity extends AppCompatActivity {
 
+    // A variável da sessão vem para aqui cima para ser visível por toda a classe!
+    private GameSession sessaoTeste;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -76,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
 
         Log.d(TAG, "--- 3. A iniciar Teste do Supabase (Leaderboard) ---");
         RetrofitLeaderboardRepository redeRepo = new RetrofitLeaderboardRepository();
-        GameSession sessaoTeste = new GameSession(jogadorTeste, motorFisico, redeRepo);
+        sessaoTeste = new GameSession(jogadorTeste, motorFisico, redeRepo);
         Log.d(TAG, "Motor físico foi ligado para o jogador: " + jogadorTeste.getNickname());
 
 
@@ -131,6 +134,28 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }).start();
-
     }
+
+    // ==========================================================
+    // 3. OS NOVOS MÉTODOS DO ANTI-CHEAT FICAM AQUI NO FUNDO!
+    // ==========================================================
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Avisamos o cérebro que o jogador saiu da app
+        if (sessaoTeste != null) {
+            sessaoTeste.notifyAppMinimized();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Avisamos o cérebro que o jogador voltou para ele verificar penalizações
+        if (sessaoTeste != null) {
+            sessaoTeste.notifyAppRestored();
+        }
+    }
+
 }

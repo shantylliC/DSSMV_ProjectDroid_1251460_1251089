@@ -6,6 +6,7 @@ import com.dicemania.domain.repository.ShakeCallback;
 import com.dicemania.domain.repository.ShakeSensor;
 
 import com.dicemania.domain.util.ScoreCalculator;
+import com.dicemania.domain.util.AntiCheatTimer;
 import java.util.List;
 
 public class GameSession implements ShakeCallback { // variaveis privadas, intocáveis pelos restantes ficheiros sem ter autorizaçao
@@ -20,6 +21,8 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
     private ShakeSensor shakeSensor;
     private LeaderboardRepository leaderboardRepository; // temos aqui o contrato com as informaçoes do jogador
 
+    private AntiCheatTimer antiCheatTimer; // temos aqui a implementaçao da ferramenta a usar para o anti batota
+
     // O Construtor: Prepara o jogo assim que o jogador entra, instanciando estas variaveis
     public GameSession(Player player, ShakeSensor shakeSensor, LeaderboardRepository leaderboardRepository) {
         this.player = player;
@@ -32,6 +35,8 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
         this.shakeSensor.startListening(this); // mal a partida começa, o sensor deve ser ligado e quem vai receber o aviso (this) vai ser a própria activity, GameSession
 
         this.leaderboardRepository = leaderboardRepository; // guarda o repositório entregue pelo ecra
+
+        this.antiCheatTimer = new AntiCheatTimer(); // instanciamos a ferramenta anti batatota. Esta será guardada NESTA variavel
 
     }
 
@@ -86,6 +91,48 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
         advanceGame();
     }
     // porque usamos estas duas funçoes?: teriamos de colocar mensagens de que o jogador nao respondeu nada ao processAnswer, logo o codigo ficaria sujo. É considerado uma má prática
+
+
+   // Método que chamamos mal a mainActivity reconheça que o jogador saiu da app
+    public void notifyAppMinimized (){
+
+        //só se vai ativar o temporizador caso estemos a responder a uma pergunta. Aqui, consideramos este conatdor como contador de batota
+
+        if (this.state == GameState.PLAYING_QUESTION){
+
+            antiCheatTimer.markAppMinimized();
+            android.util.Log.d("ANTI_CHEAT", "App minimizada durante uma pergunta. Temporizador de batota iniciado.");
+
+        }
+    }
+
+
+    // Método que será chamado pela MainActivity quando o utilizador volte ao ecra do jogo
+    public void notifyAppRestored(){
+
+        //Só realizaremos a penalizaçao se o jogador estiver a responder a uma pergunta
+
+        if (this.state == GameState.PLAYING_QUESTION){
+
+           if(antiCheatTimer.isTimeoutPenalty()){
+
+               android.util.Log.d("ANTI_CHEAT", "Batota detetada! Tempo esgotado em background.");
+               processTimeout(); // Aplica a penalização (Streak a zero e avança para a seguinte pergunta ou novo bloco de perguntas)
+
+           }
+
+           else {
+               android.util.Log.d("ANTI_CHEAT", "Retorno rápido. Jogo continua.");
+           }
+        }
+    }
+
+
+    // O método foi atualizado temporariamente para permitir mudar o estado para PLAYING_QUESTION
+    // Pois quando a pausa de 5 segundos, aquela que mostra o ecra com o numero das pergunta, tipo de pergunta, streak e pontuaçao, (IN_BREAK) acontece e acaba, o sistema nao sabe quando o jogo fica no modo PLAYING_QUESTION, entao depois desta pausa passa-se automaticamente para o PLAYING_QUESTION e o AntiCheaterTimer fica atento a se o jogador saiuo ou nao da aplicaçao
+    public void setPlayingState() {
+        this.state = GameState.PLAYING_QUESTION;
+    }
 
 
     // Lógica privada para controlar o Fluxo das 15 perguntas (Sincronização Parcial)

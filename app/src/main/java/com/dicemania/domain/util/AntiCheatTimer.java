@@ -6,14 +6,20 @@ public class AntiCheatTimer {
 
     // Chamado quando o jogador minimiza a app
     public void markAppMinimized() {
+
         backgroundTimestamp = System.currentTimeMillis();
     }
 
     // Chamado quando o jogador volta, para ver se é penalizado
     public boolean isTimeoutPenalty() {
-        if (backgroundTimestamp == 0) return false;
 
-        long timeAway = System.currentTimeMillis() - backgroundTimestamp;
+        if (backgroundTimestamp == 0) {
+
+            return false;
+
+        }
+
+        long timeAway = System.currentTimeMillis() - backgroundTimestamp; // tempo do sistema - tempo fora
         backgroundTimestamp = 0; // Limpa o registo após verificar
 
         return timeAway > MAX_ALLOWED_TIME_MS;
