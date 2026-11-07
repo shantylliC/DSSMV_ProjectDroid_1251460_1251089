@@ -15,12 +15,16 @@ public class GameSession { // variaveis privadas, intocáveis pelos restantes fi
 
     // O Construtor: Prepara o jogo assim que o jogador entra, instanciando estas variaveis
     public GameSession(Player player) {
-        this.player = player;
-        this.currentQuestionIndex = 0;
-        this.currentStreak = 0;
-        this.totalScore = 0;
-        this.state = GameState.WAITING_FOR_ROLL; // Passo 2: À espera que agite o telemóvel
+        this(player, 0, 0, 0);
+    }
 
+    // Reabre a sessão com os valores atuais ao passar para a pergunta seguinte.
+    public GameSession(Player player, int questionIndex, int currentStreak, int totalScore) {
+        this.player = player;
+        this.currentQuestionIndex = questionIndex;
+        this.currentStreak = currentStreak;
+        this.totalScore = totalScore;
+        this.state = GameState.PLAYING_QUESTION;
     }
 
     // Chamado quando o jogador agita o telemovel, o ShakeSensor dispara e o Question devolve 3 perguntas
@@ -107,3 +111,4 @@ public class GameSession { // variaveis privadas, intocáveis pelos restantes fi
         return currentBlock;
     }
 }
+

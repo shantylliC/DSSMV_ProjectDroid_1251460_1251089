@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">Dice Mania</string>
+    <string name="app_name" translatable="false">Dice Mania</string>
+    <string name="new_user" translatable="false">Novo Utilizador</string>
 </resources>
