@@ -1,67 +1,102 @@
 package com.dicemania.domain.model;
 
+import com.dicemania.domain.repository.GameSessionListener;
 
-import com.dicemania.domain.repository.LeaderboardRepository;
 import com.dicemania.domain.repository.ShakeCallback;
-import com.dicemania.domain.repository.ShakeSensor;
-
-import com.dicemania.domain.util.ScoreCalculator;
 import com.dicemania.domain.util.AntiCheatTimer;
+import com.dicemania.domain.repository.LeaderboardRepository;
+import com.dicemania.domain.repository.ShakeSensor;
+import com.dicemania.domain.util.ScoreCalculator;
 import java.util.List;
 
 public class GameSession implements ShakeCallback { // variaveis privadas, intocáveis pelos restantes ficheiros sem ter autorizaçao
     private Player player; // guarda a identidade de quem joga (ID e nome). Vem do ficheiro Player e é criado atrvés da inserçao do layout, as credenciais do jogador
     private int currentQuestionIndex; // contador das questoes, vai de 0 a 14 (verdadeiramente do 1 ao 15) // Nasce dentro do proprio construtor gameSession, garantindo que o jogo começe limpo
     private int currentStreak; // Quantas perguntas o jogodor tem acertados de seguida // Nasce dentro do proprio construtor gameSession, garantindo que o jogo começe limpo
+    private int bestStreak;
     private int totalScore; // pontuaçao total acumulada durante a partida // Nasce dentro do proprio construtor gameSession, garantindo que o jogo começe limpo
     private GameState state; //Guarda o estado atual do jogo // Vem do ficheiro GameState, instancia-se diretamente no construtor, começando no Waiting_for_roll
     private List<Question> currentBlock; // a lista que contém as 3 perguntas, e as suas respetivas respostas, dependendo do seu tipo
     // IMPORTANTE!!!: esta lista é a mesma que aparece no ficheiro RetrofitQuestionRepository, tendo o molde criado no ficheiro Question, o tal perguntasLimpas que está no fim e que retorna o ficheiro
 
     private ShakeSensor shakeSensor;
-    private LeaderboardRepository leaderboardRepository; // temos aqui o contrato com as informaçoes do jogador
+    private LeaderboardRepository leaderboardRepository;
+    private AntiCheatTimer antiCheatTimer;
 
-    private AntiCheatTimer antiCheatTimer; // temos aqui a implementaçao da ferramenta a usar para o anti batota
+    // Guarda o canal pelo qual a sessão avisa a Activity de um abanão válido.
+    private GameSessionListener gameSessionListener;
+
+
 
     // O Construtor: Prepara o jogo assim que o jogador entra, instanciando estas variaveis
-    public GameSession(Player player, ShakeSensor shakeSensor, LeaderboardRepository leaderboardRepository) {
+     // Construtor compatível com código existente que não precisa de receber eventos do sensor na interface.
+
+    public GameSession( // preserva as chamadas antigas de teste
+            Player player,
+            ShakeSensor shakeSensor,
+            LeaderboardRepository leaderboardRepository
+    ) {
+        this(player, shakeSensor, leaderboardRepository, null);
+    }
+
+
+
+
+
+    // Reabre a sessão com os valores atuais ao passar para a pergunta seguinte.
+    //Prepara uma nova partida e começa a ouvir o acelerómetro.
+    public GameSession(
+            Player player,
+            ShakeSensor shakeSensor,
+            LeaderboardRepository leaderboardRepository,
+            GameSessionListener listener
+    ) {
         this.player = player;
         this.currentQuestionIndex = 0;
         this.currentStreak = 0;
+        this.bestStreak = 0;
         this.totalScore = 0;
-        this.state = GameState.WAITING_FOR_ROLL; // Passo 2: À espera que agite o telemóvel
+        this.state = GameState.WAITING_FOR_ROLL;
 
-        this.shakeSensor = shakeSensor; // guardo o motor fisico, aqui guarda-se o acesso ao motor
-        this.shakeSensor.startListening(this); // mal a partida começa, o sensor deve ser ligado e quem vai receber o aviso (this) vai ser a própria activity, GameSession
+        this.shakeSensor = shakeSensor;
+        this.leaderboardRepository = leaderboardRepository;
+        this.gameSessionListener = listener;
+        this.antiCheatTimer = new AntiCheatTimer();
 
-        this.leaderboardRepository = leaderboardRepository; // guarda o repositório entregue pelo ecra
-
-        this.antiCheatTimer = new AntiCheatTimer(); // instanciamos a ferramenta anti batatota. Esta será guardada NESTA variavel
-
+        // A própria GameSession recebe o callback do sensor.
+        this.shakeSensor.startListening(this);
     }
 
-    // momento em que o GameSession recebe os movimentos do telemovel, o tal abanao
-    @Override // Aqui vai ser entregado a mensagem desse abanao // está a cumprir-se o contrato estabelecido no ShakeCallback
-    public void onShakeDetected (){
 
-        if (this.state == GameState.WAITING_FOR_ROLL){ // só passamos em frente se o estado do jogo estiver em esperar o abanao do jogador
-
-            this.shakeSensor.stopListening(); // vai ao hardware e desliga o acelerómetro
-            //este vai ser desligado depois do primeiro abanao, assim nao se pedem milhares de perguntas a API por cada abanao desncessário
-            // também ajuda na poupança de bateria
-            // só voltará a ser ligado depois de o jogador ter respondido ao um bloco de perguntas. 3 perguntas
-
-            android.util.Log.d("TESTE_SENSOR", "GameSession recebeu a notificaçao de que o telemovel abanou. Sesnor desligado com Sucesso");
+    //Recebe o evento do acelerómetro e impede que o mesmo abanão inicie vários pedidos consecutivos.
+    @Override
+    public void onShakeDetected() {
+        if (state != GameState.WAITING_FOR_ROLL) {
+            return;
         }
 
+        // Bloqueia novos abanões enquanto a animação e o pedido decorrem.
+        state = GameState.LOADING_BLOCK;
+        shakeSensor.stopListening();
 
-
+        // A Activity inicia a animação e pede as perguntas à API.
+        if (gameSessionListener != null) {
+            gameSessionListener.onRollDetected();
+        }
     }
 
 
-    // Chamado quando o jogador agita o telemovel, depois de passar o if de cima, o ShakeSensor dispara e o Question devolve 3 perguntas
+
+    // Chamado quando o jogador agita o telemovel, o ShakeSensor dispara e o Question devolve 3 perguntas
     // estas 3 perguntas seram guardadas na variavel chamada de current block
-    public void startNewBlock (List<Question> questions) {
+    public void startNewBlock(List<Question> questions) {
+
+        if (questions == null || questions.size() != 3) {
+            throw new IllegalArgumentException(
+                    "A partida precisa de receber exatamente três perguntas."
+            );
+        }
+
         this.currentBlock = questions; // no currentBlock, variavel temporal, estao as 3 perguntas, e as suas respostas, que o jogador tem de responder
         this.state = GameState.IN_BREAK; // Quando currentBlock tiver as questoes, este vai mudar o estado do jogo para in_break, o que permitirá entrar a aplicaçao naquele descanso de 5 segundos entre o ecra de laçamento dos dados e aquela de responder as questoes, ou seja, acabará por ser o ecra em que se vai ver o numero da questao e o tipo de pergunta que vamos fazer
 
@@ -74,6 +109,9 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
         if (correctAnswer.equals(selectedAnswer) && timeRemainingSeconds > 0) { // se a resposta selecionada pelo jogador é igual a resposta correta e os tempo de responder a resposta é superior a
 
             currentStreak++; // streak aumenta com cada resposta feita
+
+            bestStreak = Math.max(bestStreak, currentStreak);
+
             totalScore += ScoreCalculator.calculate(timeRemainingSeconds, currentStreak); // a pontuçao aumenta ou permanece igual dependendo das respostas do jogador
             // o ScoreCalculator vem do ficheiro ScoreCalculator. sao passados os parametros para calculo
 
@@ -93,85 +131,49 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
     // porque usamos estas duas funçoes?: teriamos de colocar mensagens de que o jogador nao respondeu nada ao processAnswer, logo o codigo ficaria sujo. É considerado uma má prática
 
 
-   // Método que chamamos mal a mainActivity reconheça que o jogador saiu da app
-    public void notifyAppMinimized (){
-
-        //só se vai ativar o temporizador caso estemos a responder a uma pergunta. Aqui, consideramos este conatdor como contador de batota
-
-        if (this.state == GameState.PLAYING_QUESTION){
-
+    //Regista quando o jogador deixa a aplicação durante uma pergunta.
+    public void notifyAppMinimized() {
+        if (state == GameState.PLAYING_QUESTION) {
             antiCheatTimer.markAppMinimized();
-            android.util.Log.d("ANTI_CHEAT", "App minimizada durante uma pergunta. Temporizador de batota iniciado.");
-
         }
     }
 
-
-    // Método que será chamado pela MainActivity quando o utilizador volte ao ecra do jogo
-    public void notifyAppRestored(){
-
-        //Só realizaremos a penalizaçao se o jogador estiver a responder a uma pergunta
-
-        if (this.state == GameState.PLAYING_QUESTION){
-
-           if(antiCheatTimer.isTimeoutPenalty()){
-
-               android.util.Log.d("ANTI_CHEAT", "Batota detetada! Tempo esgotado em background.");
-               processTimeout(); // Aplica a penalização (Streak a zero e avança para a seguinte pergunta ou novo bloco de perguntas)
-
-           }
-
-           else {
-               android.util.Log.d("ANTI_CHEAT", "Retorno rápido. Jogo continua.");
-           }
+    //Verifica se o jogador excedeu o limite permitido fora da aplicação.
+    public void notifyAppRestored() {
+        if (state == GameState.PLAYING_QUESTION
+                && antiCheatTimer.isTimeoutPenalty()) {
+            processTimeout();
         }
-    }
-
-
-    // O método foi atualizado temporariamente para permitir mudar o estado para PLAYING_QUESTION
-    // Pois quando a pausa de 5 segundos, aquela que mostra o ecra com o numero das pergunta, tipo de pergunta, streak e pontuaçao, (IN_BREAK) acontece e acaba, o sistema nao sabe quando o jogo fica no modo PLAYING_QUESTION, entao depois desta pausa passa-se automaticamente para o PLAYING_QUESTION e o AntiCheaterTimer fica atento a se o jogador saiuo ou nao da aplicaçao
-    public void setPlayingState() {
-        this.state = GameState.PLAYING_QUESTION;
     }
 
 
     // Lógica privada para controlar o Fluxo das 15 perguntas (Sincronização Parcial)
-    private void advanceGame() { //chamada sempre que se responda a uma questao, NAO A UM BLOCO, só quando se respondem as questoes
+    // Avança para a pergunta seguinte e decide se a partida continua, se é preciso lançar os dados novamente ou se terminou.
+    private void advanceGame() {
+        currentQuestionIndex++;
 
-        currentQuestionIndex++; // aumento constante até atingir a pergunta 15 (verdadeiramente até o 14, pois vai de 0 a 14)
+        if (currentQuestionIndex >= 15) {
+            state = GameState.FINISHED;
 
+            // Garante que o acelerómetro fica desligado no fim da partida.
+            shakeSensor.stopListening();
 
-        if (currentQuestionIndex >= 15) {// fazemos >= 15 como segurança, caso haja um bug e o jogador conseguir fazer com uqe exista um 16,17,.. questao, o programa nao crasha
-
-            state = GameState.FINISHED; // coloca logo o estado de: Acabou o jogo, ficando pronto para que esta partida seja enviada para a base de dados (SupaBase)
-
-
-            shakeSensor.stopListening(); // ainda mais segurança. Garantimos que o sensor ficque desligado depois de acabar a apartida
-
-
+            // Envia a pontuação final, se houver um repositório configurado.
             if (leaderboardRepository != null) {
-
-                // se o jogo acabou, respondeu a 15 perguntas, vamos colocar o id, nickname e score do jogador no repositório, que os vai embrular, tornar, transformar num onejto do tipo playerJson e os vai mandar por background, ou seja, via retrofit para o servidor, Supabase
-
                 leaderboardRepository.submitScore(
-
                         player.getId(),
                         player.getNickname(),
                         totalScore
-
                 );
-
             }
 
-
-        } else if (currentQuestionIndex % 3 == 0) { // Com isto o jogo sabe quando se passaram 3 perguntas, ou seja, um bloco de questoes.
-            // o % serve para calcular o resto duma divisao, o que significa que para sabermos que um bloco de questoes passou, temos de dividir o numero de questoes atuais entre 3 e dessa divisao devmos ter o resto 0. Exemplo: 1% 3 nao é zero - avança, 2 % 3 nao é zero - avança, 3 % 3 é zero modamos de estado e assim sucessivamente até serem atinguidos os 5 blocos pretendidos
-
-            state = GameState.WAITING_FOR_ROLL; // Quando for encontrado um bloco, o estado muda para WAITNG_FOR_ROLL. Fica a espera que o telemovel seja agitado novamente, ou seja, que sejam lançados os dados
+        } else if (currentQuestionIndex % 3 == 0) {
+            // Depois de cada bloco de três perguntas, espera um novo lançamento.
+            state = GameState.WAITING_FOR_ROLL;
 
         } else {
-            state = GameState.IN_BREAK; // Em caso de que o resto da divisao (% 3) seja diferente de zero, continua-se no mesmo bloco, vai para a pausa de 5s e continua a o processo novamente no topo da funçao até atinguir outro bloco ou se acabar a partida
-
+            // Ainda há perguntas no bloco atual.
+            state = GameState.IN_BREAK;
         }
     }
 
@@ -180,27 +182,64 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
         this.totalScore += 15000;
         this.currentQuestionIndex = 15;
         this.state = GameState.FINISHED;
-        this.shakeSensor.stopListening(); // ao forçar o fim duma partida o sensor deve estar desligado
 
+        // Mantém o sensor desligado quando o modo de teste termina a partida.
+        if (shakeSensor != null) {
+            shakeSensor.stopListening();
+        }
+
+        // Mantém a submissão usada pelo modo de teste, se foi fornecido um repositório.
         if (leaderboardRepository != null) {
-
-            //se forçarmos o fim do jogo por batota temos de enviar esta pontuaçao ao servidor
-            // estas pontuaçoes de testes devem ser apagadas depois no servidor da Supabase
-
             leaderboardRepository.submitScore(
-
                     player.getId(),
                     player.getNickname(),
                     totalScore
-
             );
-
         }
-
     }
 
 
+    // ZONA DE FALHAS (ERROS)
 
+    // Devolve a pergunta atual dentro do bloco de três.
+    public Question getCurrentQuestion() {
+        if (currentBlock == null || currentBlock.isEmpty()) {
+            return null;
+        }
+
+        // O índice geral da partida vai de 0 a 14; o bloco usa índices de 0 a 2.
+        int questionInBlock = currentQuestionIndex % 3;
+        return currentBlock.get(questionInBlock);
+    }
+
+    //Volta a permitir abanões depois de a API não conseguir carregar um bloco de perguntas.
+    public void onBlockLoadFailed() {
+        if (state == GameState.LOADING_BLOCK) {
+            state = GameState.WAITING_FOR_ROLL;
+        }
+    }
+
+    //Reativa o sensor quando a partida precisa de outro bloco.
+    public void listenForNextRoll() {
+        if (state == GameState.WAITING_FOR_ROLL) {
+            shakeSensor.startListening(this);
+        }
+    }
+
+    //Desliga o sensor quando a Activity termina.
+    public void dispose() {
+        if (shakeSensor != null) {
+            shakeSensor.stopListening();
+        }
+    }
+
+
+    // Marca que o jogador começou a responder à pergunta.
+    public void setPlayingState() {
+        if (state == GameState.IN_BREAK && currentBlock != null) {
+            state = GameState.PLAYING_QUESTION;
+        }
+    }
 
 
     // --- Getters para os ecrãs do Android poderem ler a informação --- Sao a encapsulaçao, podem ver mas nao podem tocar/alterar
@@ -217,16 +256,18 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
         return currentStreak;
     }
     public int getTotalScore() {
-
         return totalScore;
     }
     public GameState getState() {
-
         return state;
     }
     public List<Question> getCurrentBlock() {
-
         return currentBlock;
+    }
+
+    // Devolve o maior streak conseguido nesta partida.
+    public int getBestStreak() {
+        return bestStreak;
     }
 
 }

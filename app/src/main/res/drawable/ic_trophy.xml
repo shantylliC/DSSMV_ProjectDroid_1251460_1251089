@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+        android:width="40dp"
+        android:height="40dp"
+        android:viewportWidth="24"
+        android:viewportHeight="24">
+
+    <!-- Taça com estrela recortada no centro. -->
+    <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M6,3H18V8.2C18,11.4 15.3,14 12,14C8.7,14 6,11.4 6,8.2V3Z M12,5.6L12.8,7.2L14.6,7.5L13.3,8.8L13.6,10.6L12,9.8L10.4,10.6L10.7,8.8L9.4,7.5L11.2,7.2L12,5.6Z" />
+
+    <!-- Asas da taça. -->
+    <path
+            android:fillColor="@android:color/transparent"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="1.7"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M6,5H3V8C3,10.8 4.8,12.8 7.5,13.3 M18,5H21V8C21,10.8 19.2,12.8 16.5,13.3" />
+
+    <!-- Haste e base. -->
+    <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M10.5,14H13.5V18H10.5Z M8,18H16V20H8Z M6.5,20H17.5V22H6.5Z" />
+</vector>
