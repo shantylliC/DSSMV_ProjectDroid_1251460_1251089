@@ -22,7 +22,27 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class RetrofitLeaderboardRepository implements LeaderboardRepository { // contrato com o LeaderboardRepository, vai cumprir o que estiver dentro do ficheiro
 
+    // Devolve o resultado do envio para permitir carregar o Top 10 só depois de gravar.
+    public interface ScoreSubmissionCallback {
+        void onComplete(boolean successful, String errorMessage);
+    }
+
+    // Mantém uma única configuração de Retrofit partilhada pelo jogo, menu e leaderboard.
+    private static volatile RetrofitLeaderboardRepository instance;
+
     private SupaBaseApi supaBaseApi; // criamos um objeto do tipo SupaBaseApi para podermos usar as ferramentas de comunicaçao com o servidor mais facilmente ao longo da classe
+
+    // Devolve a instância partilhada para evitar recriar o cliente de rede em cada ecrã.
+    public static RetrofitLeaderboardRepository getInstance() {
+        if (instance == null) {
+            synchronized (RetrofitLeaderboardRepository.class) {
+                if (instance == null) {
+                    instance = new RetrofitLeaderboardRepository();
+                }
+            }
+        }
+        return instance;
+    }
 
     public RetrofitLeaderboardRepository() { // temos o construtor, apenas arranque a aplicaçao vai ser criado este repositório. Vai criar o telefone e o tradutor que vao ligar a nossa aplicaçao ao servidor Supabase
 
@@ -46,9 +66,36 @@ public class RetrofitLeaderboardRepository implements LeaderboardRepository { //
 
     @Override // contrato a cumprir com o ficheiro LeaderboardRepository
 
-    public void submitScore(String playerId, String nickname, int finalScore) { // esta funçao vai guardar a pontuaçao final do jogador depois de 15 perguntas, com base no playerId, nickname e o finlScore. Esta informaçao vai ser enviada pelo ficheiro GameSession
+    public void submitScore(String playerId, String nickname, int finalScore) {
+        submitScore(playerId, nickname, finalScore, 0);
+    }
 
-        PlayerJson playerJson = new PlayerJson(playerId, nickname, finalScore); // vamos chamar aqui ao construtor da classe PlayerJson e vamos colocar-lhe todos os parametros do jogador depois das 15 perguntas. Isto tudos erá guardado na variavel playerJson, tendo o seu respetivo formato, para assim ser enviado ao servidor
+    // Envia também o streak máximo para acompanhar a pontuação do jogador.
+    @Override
+    public void submitScore(
+            String playerId,
+            String nickname,
+            int finalScore,
+            int bestStreak
+    ) {
+        submitScore(playerId, nickname, finalScore, bestStreak, null);
+    }
+
+    // Envia o resultado e avisa quem chamou quando o servidor responder.
+    public void submitScore(
+            String playerId,
+            String nickname,
+            int finalScore,
+            int bestStreak,
+            ScoreSubmissionCallback submissionCallback
+    ) {
+
+        PlayerJson playerJson = new PlayerJson(
+                playerId,
+                nickname,
+                finalScore,
+                bestStreak
+        ); // Formata os dados enviados para a tabela players.
 
         supaBaseApi.submitPlayerScore(playerJson).enqueue(new Callback<Void>() { //
             // supaBaseApi: precisamos dele para saber o endereço do servidor. É o único que sabe falar e tem a chave do servidor. Com ele abrimos a ligaçao com a SupaBase
@@ -66,7 +113,19 @@ public class RetrofitLeaderboardRepository implements LeaderboardRepository { //
                 if (response.isSuccessful()) { // verificaçao se o servidor aceirou o pedido - 200
 
                     android.util.Log.d("SUPABASE", "Pontuaçao gravada com sucesso");
+                    if (submissionCallback != null) {
+                        submissionCallback.onComplete(true, null);
+                    }
 
+                } else {
+                    String errorMessage = "HTTP " + response.code();
+                    android.util.Log.e(
+                            "SUPABASE",
+                            "Erro ao gravar pontuação. Código HTTP: " + response.code()
+                    );
+                    if (submissionCallback != null) {
+                        submissionCallback.onComplete(false, errorMessage);
+                    }
                 }
             }
 
@@ -75,6 +134,9 @@ public class RetrofitLeaderboardRepository implements LeaderboardRepository { //
                 // Throwable t: é o relatório do acidente, do proque houve um erro
 
                 android.util.Log.d("SUPABASE", "Erro ao gravar pontuaçao: " + t.getMessage());
+                if (submissionCallback != null) {
+                    submissionCallback.onComplete(false, t.getMessage());
+                }
 
             }
         });
@@ -103,7 +165,12 @@ public class RetrofitLeaderboardRepository implements LeaderboardRepository { //
 
                     for (PlayerJson playerJson : response.body()) { // por cada response.body() recebido dá-lhe o nome de playerJson
 
-                        top10.add(new Player(playerJson.getId(), playerJson.getNickname(), playerJson.getScore()));
+                        top10.add(new Player(
+                                playerJson.getId(),
+                                playerJson.getNickname(),
+                                playerJson.getScore(),
+                                playerJson.getBestStreak()
+                        ));
                         // top10.add: adicionar na lista dinamica chamada de top10, os 3 dados puros
                         // para cada variavel do tipo Player vai ao objeto playerJson e retira-lhe o id, nickname e o score
                         //new Player: desses 3 dados puras constroi um Player limpo

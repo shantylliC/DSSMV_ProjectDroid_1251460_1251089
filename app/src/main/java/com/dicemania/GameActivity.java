@@ -2,7 +2,6 @@ package com.dicemania;
 
 import android.animation.Animator;
 import android.animation.ArgbEvaluator;
-import android.app.AlertDialog;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.text.Html;
@@ -26,6 +25,7 @@ import com.google.android.material.button.MaterialButton;
 
 import com.airbnb.lottie.LottieAnimationView;
 import com.dicemania.data.network.RetrofitQuestionRepository;
+import com.dicemania.data.network.RetrofitLeaderboardRepository;
 import com.dicemania.data.sensor.AndroidShakeSensor;
 import com.dicemania.domain.model.Category;
 import com.dicemania.domain.model.GameSession;
@@ -37,7 +37,9 @@ import com.dicemania.domain.repository.GameSessionListener;
 import com.dicemania.domain.repository.QuestionRepository;
 import com.dicemania.domain.repository.ShakeSensor;
 import com.dicemania.data.local.PlayerStatsRepository;
+import com.dicemania.data.sound.BackgroundMusicManager;
 import com.dicemania.data.sound.GameFeedbackEffects;
+import com.dicemania.domain.util.DebugManager;
 
 import java.util.List;
 import java.util.Random;
@@ -64,6 +66,8 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
 
     private GameSession gameSession;
     private QuestionRepository questionRepository;
+    // Marca se esta partida segue o modo de teste ativado no logo.
+    private boolean godModeEnabled;
     private CountDownTimer screenTimer;
     private CountDownTimer questionTimer;
     // Gere os bips, os sons das respostas e as vibrações desta partida.
@@ -100,6 +104,7 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
         super.onCreate(savedInstanceState);
 
         questionRepository = new RetrofitQuestionRepository();
+        godModeEnabled = new DebugManager(this).isGodModeEnabled();
 
         playerStatsRepository = new PlayerStatsRepository(this);
         // Carrega os efeitos curtos em segundo plano antes da primeira pergunta.
@@ -110,8 +115,9 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
         gameSession = new GameSession(
                 readPlayer(),
                 new AndroidShakeSensor(this),
-                null,
-                this
+                RetrofitLeaderboardRepository.getInstance(),
+                this,
+                godModeEnabled
         );
     }
 
@@ -168,6 +174,8 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
 
         leftDice.playAnimation();
         rightDice.playAnimation();
+        // Mantém um som em loop durante a animação e pára quando os dois dados terminarem.
+        feedbackEffects.playDiceRoll();
 
         // RetrofitQuestionRepository usa execute(), por isso corre fora da UI.
         networkExecutor.execute(() -> {
@@ -213,6 +221,7 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
 
                 if (finishedAnimations == 2) {
                     animationFinished = true;
+                    feedbackEffects.stopDiceRoll();
                     showSummaryWhenReady();
                 }
             }
@@ -237,6 +246,8 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
 
     // Mostra uma mensagem e volta a ouvir o sensor se o pedido falhar.
     private void handleQuestionLoadFailure() {
+        feedbackEffects.stopDiceRoll();
+
         Toast.makeText(
                 this,
                 R.string.question_load_failed,
@@ -284,9 +295,9 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
         questionNumber.setText(getString(
                 R.string.summary_question_counter,
                 gameSession.getCurrentQuestionIndex() + 1,
-                15
+                gameSession.getTotalQuestionCount()
         ));
-        progress.setMax(15);
+        progress.setMax(gameSession.getTotalQuestionCount());
         progress.setProgress(gameSession.getCurrentQuestionIndex() + 1);
         int currentStreak = gameSession.getCurrentStreak();
         streak.setText(getString(
@@ -360,7 +371,8 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
 
         number.setText(getString(
                 R.string.question_number,
-                gameSession.getCurrentQuestionIndex() + 1
+                gameSession.getCurrentQuestionIndex() + 1,
+                gameSession.getTotalQuestionCount()
         ));
         text.setText(decodeHtml(question.getText()));
 
@@ -549,26 +561,28 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
         }
     }
 
-    // Mostra o resultado final da partida.
+    // Guarda os recordes normais e encaminha o jogador diretamente para o leaderboard.
     private void showFinishedMessage() {
-
-        // Guarda os recordes desta partida associados ao ID do jogador.
         Player player = gameSession.getPlayer();
-        playerStatsRepository.saveBestStats(
-                player.getId(),
-                gameSession.getTotalScore(),
-                gameSession.getBestStreak()
-        );
 
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.game_finished)
-                .setMessage(getString(
-                        R.string.final_score,
-                        gameSession.getTotalScore()
-                ))
-                .setCancelable(false)
-                .setPositiveButton(R.string.close, (dialog, which) -> finish())
-                .show();
+        // Não grava os valores artificiais do modo Deus nos recordes reais do jogador.
+        if (!gameSession.isGodModeEnabled()) {
+            playerStatsRepository.saveBestStats(
+                    player.getId(),
+                    gameSession.getTotalScore(),
+                    gameSession.getBestStreak()
+            );
+        }
+
+        // Abre imediatamente o ranking; a Activity trata do envio e depois carrega o Top 10.
+        startActivity(LeaderboardActivity.createGameResultIntent(
+                this,
+                player,
+                gameSession.getTotalScore(),
+                gameSession.getBestStreak(),
+                gameSession.isGodModeEnabled()
+        ));
+        finish();
     }
 
     // Volta a apresentar o ecrã dos dados.
@@ -623,6 +637,7 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
         if (gameSession != null) {
             gameSession.notifyAppMinimized();
         }
+        BackgroundMusicManager.getInstance().pause();
         super.onPause();
     }
 
@@ -630,6 +645,7 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
     @Override
     protected void onResume() {
         super.onResume();
+        BackgroundMusicManager.getInstance().resumeIfEnabled(this);
 
         if (gameSession != null) {
             GameState before = gameSession.getState();

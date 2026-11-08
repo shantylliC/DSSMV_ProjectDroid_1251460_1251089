@@ -30,25 +30,25 @@ public interface SupaBaseApi { // contrato, a tal regra que se dev cumprir sempr
     })
 
 
-    @GET ("rest/v1/players?select=*&order=score.desc&limit=10") // o método GET lê os dados, vindos do servidor, sem os alterar
+    @GET ("rest/v1/players?select=id,nickname,score,best_streak&order=score.desc,best_streak.desc,nickname.asc&limit=10") // o método GET lê os dez melhores perfis sem alterar a tabela
     // rest/v1/players: ir atabela de Players
-    // ?select=*: traz todas as colunas
-    // order=score.desc: organiza a lista de score ede forma descendente (maior a menor)
+    // select: devolve ID, nickname, score e streak máximo para a aplicação.
+    // order: põe a pontuação maior primeiro e usa streak/nickname para desempatar.
     // &limit=10: traz apenas os 10 primeiros
 
     Call<List<PlayerJson>> getTop10Players(); // chamada assincrona, vai mandar as coisas no momento que for necessário
     // quando forem recebidos os dados do servidor, a tal chamada, estes seram guardados numa lista do tipo PlayerJson, esta lista terá o nome de getTop10Players
     // obtemos 10 jogadores diferentes
 
-    @Headers ({ // esta mensagem que vamos mandar para o servidor serve para mandar novos dados, ou seja, acrescentar mais informaçoes a nossa tabela virtual
+    @Headers ({ // Esta mensagem permite inserir um jogador ou atualizar o registo já existente com o mesmo ID.
 
             "apikey: " + API_KEY,
             "Authorization: Bearer " + API_KEY,
             "Content-Type: application/json", // explica que o que vamos a mandar é um ficheiro de dados JSON estruturado como aparece no PLayerJson
-            "Prefer: resolution=merge-duplicates" // se o ID de um jogador ja existir, atualiza a pontuaçao. Se nao exitir, cria-se um novo jogador e acrescenta-se as suas respetivas informaçoes
+            "Prefer: resolution=merge-duplicates,return=minimal" // Com on_conflict=id, atualiza a linha existente e não devolve um corpo desnecessário.
     })
 
-    @POST ("rest/v1/players") // este método serve para alterar  ou criar dados no servidor. Aponta diretamente para a tabale chamada Player
+    @POST ("rest/v1/players?on_conflict=id") // O ID identifica unicamente o jogador para o upsert não criar duplicados.
 
     Call<Void> submitPlayerScore(@Body PlayerJson player); // fazemos uma chamada a espera de que o servidor atenda e faça o que pedimos
     // @Body: diz ao retrofit para que pegue no objeto PLayerJson e o converte em linguagem JSON

@@ -10,12 +10,22 @@ import com.dicemania.domain.util.ScoreCalculator;
 import java.util.List;
 
 public class GameSession implements ShakeCallback { // variaveis privadas, intocáveis pelos restantes ficheiros sem ter autorizaçao
+    // Define a duração normal da partida e o limite visível do modo de teste.
+    private static final int NORMAL_QUESTION_COUNT = 15;
+    private static final int GOD_MODE_QUESTION_COUNT = 3;
+    private static final int GOD_MODE_SCORE = 999999;
+    private static final int GOD_MODE_STREAK = 15;
+
     private Player player; // guarda a identidade de quem joga (ID e nome). Vem do ficheiro Player e é criado atrvés da inserçao do layout, as credenciais do jogador
     private int currentQuestionIndex; // contador das questoes, vai de 0 a 14 (verdadeiramente do 1 ao 15) // Nasce dentro do proprio construtor gameSession, garantindo que o jogo começe limpo
     private int currentStreak; // Quantas perguntas o jogodor tem acertados de seguida // Nasce dentro do proprio construtor gameSession, garantindo que o jogo começe limpo
     private int bestStreak;
     private int totalScore; // pontuaçao total acumulada durante a partida // Nasce dentro do proprio construtor gameSession, garantindo que o jogo começe limpo
     private GameState state; //Guarda o estado atual do jogo // Vem do ficheiro GameState, instancia-se diretamente no construtor, começando no Waiting_for_roll
+    // Guarda se esta sessão usa os limites curtos de teste do modo Deus.
+    private final boolean godModeEnabled;
+    // Define quantas perguntas terminam esta sessão: 15 no modo normal ou 3 no modo Deus.
+    private final int totalQuestionCount;
     private List<Question> currentBlock; // a lista que contém as 3 perguntas, e as suas respetivas respostas, dependendo do seu tipo
     // IMPORTANTE!!!: esta lista é a mesma que aparece no ficheiro RetrofitQuestionRepository, tendo o molde criado no ficheiro Question, o tal perguntasLimpas que está no fim e que retorna o ficheiro
 
@@ -51,11 +61,26 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
             LeaderboardRepository leaderboardRepository,
             GameSessionListener listener
     ) {
+        this(player, shakeSensor, leaderboardRepository, listener, false);
+    }
+
+    // Prepara uma partida normal ou uma sessão curta de três perguntas para depuração.
+    public GameSession(
+            Player player,
+            ShakeSensor shakeSensor,
+            LeaderboardRepository leaderboardRepository,
+            GameSessionListener listener,
+            boolean godModeEnabled
+    ) {
         this.player = player;
         this.currentQuestionIndex = 0;
-        this.currentStreak = 0;
-        this.bestStreak = 0;
-        this.totalScore = 0;
+        this.godModeEnabled = godModeEnabled;
+        this.totalQuestionCount = godModeEnabled
+                ? GOD_MODE_QUESTION_COUNT
+                : NORMAL_QUESTION_COUNT;
+        this.currentStreak = godModeEnabled ? GOD_MODE_STREAK : 0;
+        this.bestStreak = godModeEnabled ? GOD_MODE_STREAK : 0;
+        this.totalScore = godModeEnabled ? GOD_MODE_SCORE : 0;
         this.state = GameState.WAITING_FOR_ROLL;
 
         this.shakeSensor = shakeSensor;
@@ -106,7 +131,10 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
     public void processAnswer(String selectedAnswer, String correctAnswer, int timeRemainingSeconds) { // recebe a variavel selectedAnswer do ficheiro GameActivity, correctAnswer do ficheiro Question, que vem da variavel currentBlock; e o timeRemainingSeconds do cronometro doe cra, countdowntimer
         // esta funçao é chamada quando o jogador toca em algum dos botoes para a resposta
 
-        if (correctAnswer.equals(selectedAnswer) && timeRemainingSeconds > 0) { // se a resposta selecionada pelo jogador é igual a resposta correta e os tempo de responder a resposta é superior a
+        if (godModeEnabled) {
+            // Mantém os valores máximos visíveis para experimentar as cores e o layout do streak.
+            applyGodModeStats();
+        } else if (correctAnswer.equals(selectedAnswer) && timeRemainingSeconds > 0) { // se a resposta selecionada pelo jogador é igual a resposta correta e os tempo de responder a resposta é superior a
 
             currentStreak++; // streak aumenta com cada resposta feita
 
@@ -125,7 +153,11 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
     // Funçao que aparece se o tempo chegar ao zero ou o AntiCheatTimer detetar batota
     public void processTimeout() { // esta funçao é chamda caso o jogador nao responder ou o tempo acabar
 
-        currentStreak = 0; // Penalização imediata, logo a zero
+        if (godModeEnabled) {
+            applyGodModeStats();
+        } else {
+            currentStreak = 0; // Penalização imediata, logo a zero
+        }
         advanceGame();
     }
     // porque usamos estas duas funçoes?: teriamos de colocar mensagens de que o jogador nao respondeu nada ao processAnswer, logo o codigo ficaria sujo. É considerado uma má prática
@@ -152,18 +184,19 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
     private void advanceGame() {
         currentQuestionIndex++;
 
-        if (currentQuestionIndex >= 15) {
+        if (currentQuestionIndex >= totalQuestionCount) {
             state = GameState.FINISHED;
 
             // Garante que o acelerómetro fica desligado no fim da partida.
             shakeSensor.stopListening();
 
             // Envia a pontuação final, se houver um repositório configurado.
-            if (leaderboardRepository != null) {
+            if (!godModeEnabled && leaderboardRepository != null) {
                 leaderboardRepository.submitScore(
                         player.getId(),
                         player.getNickname(),
-                        totalScore
+                        totalScore,
+                        bestStreak
                 );
             }
 
@@ -179,8 +212,12 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
 
     // --- MODO DESENVOLVEDOR (UC04 / RNF17) ---
     public void debugForceEndGame() { // modo DEUS, temos a maxima pontuaçao e mostra a final da partida e o leaderboard
-        this.totalScore += 15000;
-        this.currentQuestionIndex = 15;
+        if (godModeEnabled) {
+            applyGodModeStats();
+        } else {
+            this.totalScore += 15000;
+        }
+        this.currentQuestionIndex = totalQuestionCount;
         this.state = GameState.FINISHED;
 
         // Mantém o sensor desligado quando o modo de teste termina a partida.
@@ -189,11 +226,12 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
         }
 
         // Mantém a submissão usada pelo modo de teste, se foi fornecido um repositório.
-        if (leaderboardRepository != null) {
+        if (!godModeEnabled && leaderboardRepository != null) {
             leaderboardRepository.submitScore(
                     player.getId(),
                     player.getNickname(),
-                    totalScore
+                    totalScore,
+                    bestStreak
             );
         }
     }
@@ -268,6 +306,23 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
     // Devolve o maior streak conseguido nesta partida.
     public int getBestStreak() {
         return bestStreak;
+    }
+
+    // Devolve o total de perguntas que a interface deve mostrar no progresso.
+    public int getTotalQuestionCount() {
+        return totalQuestionCount;
+    }
+
+    // Informa se os valores apresentados pertencem ao modo Deus de depuração.
+    public boolean isGodModeEnabled() {
+        return godModeEnabled;
+    }
+
+    // Reaplica os valores máximos para as três perguntas de teste.
+    private void applyGodModeStats() {
+        currentStreak = GOD_MODE_STREAK;
+        bestStreak = GOD_MODE_STREAK;
+        totalScore = GOD_MODE_SCORE;
     }
 
 }

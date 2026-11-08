@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.google.android.material.switchmaterial.SwitchMaterial;
@@ -13,14 +14,27 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.dicemania.data.local.SharedPreferencePlayerRepository;
 import com.dicemania.data.local.PlayerStatsRepository;
+import com.dicemania.data.network.RetrofitLeaderboardRepository;
+import com.dicemania.data.sound.BackgroundMusicManager;
 import com.dicemania.data.sound.GameFeedbackEffects;
+import com.dicemania.domain.util.DebugManager;
 
 import com.dicemania.domain.model.Player;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 public class HomeActivity extends AppCompatActivity {
 
+    // Identidade local usada pela partida e pelo painel de definições.
     private Player player;
+
+    // Recordes locais usados para mostrar e reenviar os valores ao servidor.
+    private PlayerStatsRepository playerStatsRepository;
+
+    // Repositório online partilhado com a partida e o ecrã do ranking.
+    private RetrofitLeaderboardRepository leaderboardRepository;
+
+    // Reconhece a sequência secreta de toques no logo da Home.
+    private DebugManager debugManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,15 +52,72 @@ public class HomeActivity extends AppCompatActivity {
             return;
         }
 
+        playerStatsRepository = new PlayerStatsRepository(this);
+        leaderboardRepository = RetrofitLeaderboardRepository.getInstance();
+        debugManager = new DebugManager(this);
+
 
         Button letsPlayButton = findViewById(R.id.letsPlayButton);
         ImageButton settingsButton = findViewById(R.id.settingsButton);
+        configureDebugModeLogoTap();
 
         // Começa uma partida para o jogador atual.
         letsPlayButton.setOnClickListener(view -> startGame());
 
         // Abre o painel com o perfil e os recordes.
         settingsButton.setOnClickListener(view -> showSettings());
+    }
+
+    // Alterna o modo Deus depois de cinco toques rápidos no logo do jogo.
+    private void configureDebugModeLogoTap() {
+        ImageView gameLogo = findViewById(R.id.gameLogo);
+        gameLogo.setOnClickListener(view -> {
+            if (!debugManager.registerSecretTap()) {
+                return;
+            }
+
+            boolean godModeEnabled = debugManager.toggleGodMode();
+            Toast.makeText(
+                    this,
+                    godModeEnabled
+                            ? R.string.debug_mode_activated
+                            : R.string.debug_mode_deactivated,
+                    Toast.LENGTH_SHORT
+            ).show();
+        });
+    }
+
+    // Reenvia os recordes locais ao regressar ao menu para recuperar envios falhados por falta de rede.
+    @Override
+    protected void onResume() {
+        super.onResume();
+        BackgroundMusicManager.getInstance().resumeIfEnabled(this);
+
+        if (player == null || playerStatsRepository == null || leaderboardRepository == null) {
+            return;
+        }
+
+        int bestScore = playerStatsRepository.getBestScore(player.getId());
+        int bestStreak = playerStatsRepository.getBestStreak(player.getId());
+
+        // Não cria linhas vazias no ranking antes de o jogador terminar uma partida.
+        if (playerStatsRepository.hasFinishedGame(player.getId())
+                || bestScore > 0
+                || bestStreak > 0) {
+            leaderboardRepository.submitScore(
+                    player.getId(),
+                    player.getNickname(),
+                    bestScore,
+                    bestStreak
+            );
+        }
+    }
+
+    // Pausa a música quando a Home deixa de estar visível.
+    @Override
+    protected void onPause() {
+        BackgroundMusicManager.getInstance().pause();
+        super.onPause();
     }
 
     // Inicia o jogo e envia a identidade do jogador para a GameActivity.
@@ -69,6 +140,7 @@ public class HomeActivity extends AppCompatActivity {
         TextView bestStreak = panel.findViewById(R.id.settingsBestStreak);
         TextView bestScore = panel.findViewById(R.id.settingsBestScore);
         SwitchMaterial soundSwitch = panel.findViewById(R.id.settingsSoundSwitch);
+        SwitchMaterial musicSwitch = panel.findViewById(R.id.settingsMusicSwitch);
         SwitchMaterial vibrationSwitch =
                 panel.findViewById(R.id.settingsVibrationSwitch);
         Button leaderboardButton =
@@ -76,11 +148,15 @@ public class HomeActivity extends AppCompatActivity {
 
         // Mostra as opções guardadas sem gravar alterações durante a inicialização.
         soundSwitch.setChecked(GameFeedbackEffects.isSoundEnabled(this));
+        musicSwitch.setChecked(BackgroundMusicManager.isMusicEnabled(this));
         vibrationSwitch.setChecked(GameFeedbackEffects.isVibrationEnabled(this));
 
         // Guarda cada opção imediatamente para ser aplicada na próxima partida.
         soundSwitch.setOnCheckedChangeListener((buttonView, isChecked) ->
                 GameFeedbackEffects.setSoundEnabled(this, isChecked)
+        );
+        musicSwitch.setOnCheckedChangeListener((buttonView, isChecked) ->
+                BackgroundMusicManager.setMusicEnabled(this, isChecked)
         );
         vibrationSwitch.setOnCheckedChangeListener((buttonView, isChecked) ->
                 GameFeedbackEffects.setVibrationEnabled(this, isChecked)
@@ -108,14 +184,11 @@ public class HomeActivity extends AppCompatActivity {
                 )
         );
 
-        // Mostra um aviso temporário enquanto a ligação ao leaderboard fica adiada.
-        leaderboardButton.setOnClickListener(view ->
-                Toast.makeText(
-                        this,
-                        R.string.leaderboard_unavailable,
-                        Toast.LENGTH_SHORT
-                ).show()
-        );
+        // Fecha as definições e abre o ecrã que carrega o Top 10 da base de dados.
+        leaderboardButton.setOnClickListener(view -> {
+            dialog.dismiss();
+            startActivity(new Intent(this, LeaderboardActivity.class));
+        });
 
         dialog.setContentView(panel);
         dialog.show();

@@ -48,6 +48,18 @@
             android:paddingTop="8dp"
             android:paddingBottom="8dp" />
 
+    <!-- Liga ou desliga apenas a música ambiente, sem alterar os efeitos sonoros do jogo. -->
+    <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/settingsMusicSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/montserrat_bold"
+            android:text="@string/background_music_setting"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp" />
+
     <!-- Permite desligar separadamente a vibração da contagem e do fim do tempo. -->
     <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/settingsVibrationSwitch"

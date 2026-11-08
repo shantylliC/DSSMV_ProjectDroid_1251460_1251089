@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Linha branca explícita para separar claramente as entradas do leaderboard. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+       android:shape="rectangle">
+    <size android:height="2dp" />
+    <solid android:color="@color/white" />
+</shape>

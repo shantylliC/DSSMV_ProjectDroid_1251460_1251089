@@ -7,11 +7,20 @@ public class Player {
     private String id;
     private String nickname;
     private int playerScore;
+    // Recorde de respostas certas seguidas devolvido pelo leaderboard.
+    private int bestStreak;
 
+    // Mantém compatibilidade com os jogadores locais e chamadas já existentes.
     public Player(String id, String nickname, int playerScore) {
+        this(id, nickname, playerScore, 0);
+    }
+
+    // Cria um jogador completo, incluindo o recorde de streak vindo da base de dados.
+    public Player(String id, String nickname, int playerScore, int bestStreak) {
         this.id = id;
         this.nickname = nickname;
         this.playerScore = playerScore;
+        this.bestStreak = bestStreak;
     }
 
     // Getters para permitir a leitura dos dados
@@ -25,6 +34,11 @@ public class Player {
     public int getPlayerScore() {
 
         return playerScore;
+    }
+
+    // Devolve o maior streak guardado para este jogador.
+    public int getBestStreak() {
+        return bestStreak;
     }
 
 }

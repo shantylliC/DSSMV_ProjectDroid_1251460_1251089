@@ -14,7 +14,7 @@ import com.dicemania.R;
 
 /**
  * Centraliza os sons e as vibrações curtas usados durante uma partida.
- * Os MP3 de aplausos e vaias são efeitos CC0 guardados em res/raw.
+ * Os MP3 de aplausos e vaias e o WAV contínuo dos dados ficam em res/raw.
  */
 public class GameFeedbackEffects {
 
@@ -31,7 +31,7 @@ public class GameFeedbackEffects {
     private static final int TIMEOUT_ALARM_DURATION_MS = 850;
     private static final long TIMEOUT_VIBRATION_DURATION_MS = 550L;
 
-    // Gere apenas dois sons ao mesmo tempo, suficiente para estes efeitos de jogo.
+    // Gere os três efeitos de áudio da partida sem bloquear a interface.
     private final SoundPool soundPool;
 
     // Emite os bips do relógio sem precisar de ficheiros de áudio adicionais.
@@ -44,13 +44,19 @@ public class GameFeedbackEffects {
     private final boolean soundEnabled;
     private final boolean vibrationEnabled;
 
-    // IDs atribuídos pelo SoundPool aos dois efeitos que vêm dos recursos raw.
+    // IDs atribuídos pelo SoundPool aos efeitos guardados em res/raw.
     private int applauseSoundId;
     private int booSoundId;
+    private int diceRollSoundId;
+    private int diceRollStreamId;
 
     // Os sons só podem tocar depois de o SoundPool terminar de os carregar.
     private volatile boolean applauseLoaded;
     private volatile boolean booLoaded;
+    private volatile boolean diceRollLoaded;
+
+    // Permite começar o som assim que carregar, mesmo que a animação já tenha começado.
+    private volatile boolean diceRollRequested;
 
     // Impede chamadas a recursos nativos depois de a Activity ser destruída.
     private volatile boolean released;
@@ -87,7 +93,7 @@ public class GameFeedbackEffects {
 
             soundPool = new SoundPool.Builder()
                     .setAudioAttributes(audioAttributes)
-                    .setMaxStreams(2)
+                    .setMaxStreams(3)
                     .build();
 
             // Marca cada efeito como pronto quando a descodificação assíncrona termina.
@@ -100,6 +106,9 @@ public class GameFeedbackEffects {
                     applauseLoaded = true;
                 } else if (sampleId == booSoundId) {
                     booLoaded = true;
+                } else if (sampleId == diceRollSoundId) {
+                    diceRollLoaded = true;
+                    startDiceRollIfReady();
                 }
             });
 
@@ -114,6 +123,13 @@ public class GameFeedbackEffects {
             booSoundId = soundPool.load(
                     applicationContext,
                     R.raw.wrong_boo,
+                    1
+            );
+
+            // O som de dados em loop acompanha a duração da animação Lottie.
+            diceRollSoundId = soundPool.load(
+                    applicationContext,
+                    R.raw.dice_roll,
                     1
             );
         } else {
@@ -191,6 +207,46 @@ public class GameFeedbackEffects {
         vibrate(TIMEOUT_VIBRATION_DURATION_MS);
     }
 
+    /** Inicia o som contínuo de dados quando a animação começa. */
+    public void playDiceRoll() {
+        if (released || !soundEnabled || soundPool == null) {
+            return;
+        }
+
+        diceRollRequested = true;
+        startDiceRollIfReady();
+    }
+
+    // Só inicia o loop depois de o ficheiro estar pronto e se a animação ainda estiver ativa.
+    private void startDiceRollIfReady() {
+        if (released
+                || !diceRollRequested
+                || !diceRollLoaded
+                || soundPool == null
+                || diceRollStreamId != 0) {
+            return;
+        }
+
+        diceRollStreamId = soundPool.play(
+                diceRollSoundId,
+                0.75f,
+                0.75f,
+                1,
+                -1,
+                1f
+        );
+    }
+
+    /** Pára o som de dados assim que as duas animações terminam. */
+    public void stopDiceRoll() {
+        diceRollRequested = false;
+
+        if (soundPool != null && diceRollStreamId != 0) {
+            soundPool.stop(diceRollStreamId);
+            diceRollStreamId = 0;
+        }
+    }
+
     /**
      * Toca palmas se a resposta estiver certa ou uma vaia se estiver errada.
      */
@@ -238,6 +294,9 @@ public class GameFeedbackEffects {
         }
 
         released = true;
+
+        // Garante que o loop não continua quando a Activity fecha.
+        stopDiceRoll();
 
         if (toneGenerator != null) {
             toneGenerator.stopTone();

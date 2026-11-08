@@ -9,6 +9,8 @@ public class PlayerStatsRepository {
     private static final String PREFERENCES_NAME = "DiceManiaPlayerStats";
     private static final String KEY_BEST_SCORE = "best_score_";
     private static final String KEY_BEST_STREAK = "best_streak_";
+    // Marca partidas terminadas, incluindo resultados em que score e streak são zero.
+    private static final String KEY_HAS_FINISHED_GAME = "has_finished_game_";
 
     private final SharedPreferences preferences;
 
@@ -30,6 +32,11 @@ public class PlayerStatsRepository {
         return preferences.getInt(KEY_BEST_STREAK + playerId, 0);
     }
 
+    // Indica se este jogador já terminou pelo menos uma partida, mesmo com pontuação zero.
+    public boolean hasFinishedGame(String playerId) {
+        return preferences.getBoolean(KEY_HAS_FINISHED_GAME + playerId, false);
+    }
+
     // Atualiza cada recorde apenas quando o novo valor é superior.
     public void saveBestStats(String playerId, int score, int streak) {
         int previousBestScore = getBestScore(playerId);
@@ -45,6 +52,8 @@ public class PlayerStatsRepository {
             editor.putInt(KEY_BEST_STREAK + playerId, streak);
         }
 
+        // Regista a conclusão para permitir reenviar resultados se a rede falhar.
+        editor.putBoolean(KEY_HAS_FINISHED_GAME + playerId, true);
         editor.apply();
     }
 }

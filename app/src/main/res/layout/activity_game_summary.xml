@@ -88,7 +88,7 @@
             android:id="@+id/summaryQuestionType"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="12dp"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="8dp"
             android:gravity="center"
@@ -104,7 +104,7 @@
             android:id="@+id/summaryAnswerType"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="12dp"
             android:layout_marginStart="8dp"
             android:layout_marginEnd="12dp"
             android:gravity="center"
@@ -123,57 +123,69 @@
             app:barrierDirection="bottom"
             app:constraint_referenced_ids="summaryQuestionType,summaryAnswerType" />
 
+    <!-- Separa visualmente as informações do dado Question das do dado Answer. -->
+    <View
+            android:id="@+id/summaryDiceDivider"
+            android:layout_width="2dp"
+            android:layout_height="0dp"
+            android:background="@color/white"
+            app:layout_constraintStart_toStartOf="@id/summaryCenterGuide"
+            app:layout_constraintTop_toTopOf="@id/summaryQuestionLabel"
+            app:layout_constraintBottom_toBottomOf="@id/summaryTopContentBottom" />
 
-    <!-- Mostra a posição atual na partida. -->
+    <!-- Mostra a posição atual, centrada entre os dados e as estatísticas. -->
     <TextView
             android:id="@+id/summaryQuestionNumber"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="12dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="4dp"
             android:gravity="center"
             android:textColor="@color/white"
             android:textSize="24sp"
             android:textStyle="bold"
             android:fontFamily="@font/montserrat_extrabold"
             app:layout_constraintTop_toBottomOf="@id/summaryTopContentBottom"
+            app:layout_constraintBottom_toTopOf="@id/summaryProgress"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintVertical_chainStyle="packed"
+            app:layout_constraintVertical_bias="0.5"
     />
 
-    <!-- Mostra visualmente o progresso da partida por baixo do contador. -->
+    <!-- Mantém a barra perto do contador e centra ambos no espaço disponível. -->
     <ProgressBar
             android:id="@+id/summaryProgress"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="0dp"
             android:layout_height="8dp"
             android:layout_marginStart="52dp"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="4dp"
             android:layout_marginEnd="52dp"
-            android:layout_marginBottom="20dp"
+            android:layout_marginBottom="16dp"
             android:max="15"
             android:indeterminate="false"
             android:progress="1"
             android:progressTint="@color/hot_pink"
             android:progressBackgroundTint="@color/progress_track"
             app:layout_constraintTop_toBottomOf="@id/summaryQuestionNumber"
-            app:layout_constraintBottom_toTopOf="@id/summaryScore"
+            app:layout_constraintBottom_toTopOf="@id/summaryBottomContentTop"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- A pontuação fica no canto inferior esquerdo. -->
+    <!-- Mantém o score à esquerda e alinha o seu centro vertical com o grupo do streak. -->
     <TextView
             android:id="@+id/summaryScore"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
             android:layout_marginEnd="8dp"
-            android:layout_marginBottom="28dp"
-            android:gravity="start"
+            android:gravity="start|center_vertical"
             android:textColor="@color/white"
             android:textSize="20sp"
             android:fontFamily="@font/montserrat_bold"
-            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toTopOf="@id/summaryStreakGroup"
+            app:layout_constraintBottom_toBottomOf="@id/summaryStreakGroup"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/summaryCenterGuide" />
 
@@ -205,5 +217,13 @@
                 android:textSize="20sp"
                 android:fontFamily="@font/montserrat_bold" />
     </LinearLayout>
+
+    <!-- Define o limite superior das estatísticas inferiores para centrar contador e barra. -->
+    <androidx.constraintlayout.widget.Barrier
+            android:id="@+id/summaryBottomContentTop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:barrierDirection="top"
+            app:constraint_referenced_ids="summaryScore,summaryStreakGroup" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
