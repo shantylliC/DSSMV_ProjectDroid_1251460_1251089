@@ -1,67 +1,75 @@
 package com.dicemania;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.widget.Button;
+import android.widget.EditText;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 
-import android.util.Log;
-import com.dicemania.domain.model.Category;
-import com.dicemania.domain.model.Question;
-import com.dicemania.data.network.RetrofitQuestionRepository;
-import com.dicemania.domain.model.QuestionType;
+import com.dicemania.data.local.SharedPreferencePlayerRepository;
+import com.dicemania.domain.model.Player;
 
-import java.util.List;
+import java.util.UUID;
 
 
+// Mostra o login a quem ainda não tem jogador guardado e encaminha os restantes para HomeActivity.
 public class MainActivity extends AppCompatActivity {
+
+    private EditText usernameInput;
+    private SharedPreferencePlayerRepository playerRepository;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
-        setContentView(R.layout.activity_main);
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
 
+        playerRepository = new SharedPreferencePlayerRepository(this);
 
-                // --- DAQUI PARA BAIXO É O NOSSO TESTE ---
-                Log.d("DiceManiaTest", "A arrancar a app. A iniciar o teste da API...");
-
-                // Usamos uma Background Thread para não bloquear a Main Thread
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            // 1. Instanciar o teu repositório
-                            RetrofitQuestionRepository repository = new RetrofitQuestionRepository();
-
-                            // 2. Pedir 3 perguntas da API
-                            // ATENÇÃO: Se a tua função getQuestions pedir parâmetros diferentes, ajusta aqui!
-                            List<Question> perguntasLimpas = repository.getQuestions(Category.VIDEOGAMES , QuestionType.MULTIPLE_CHOICE, 3);
-
-                            // 3. Imprimir o resultado na consola
-                            for (Question q : perguntasLimpas) {
-                                Log.d("DiceManiaTest", "PERGUNTA: " + q.getText());
-                                Log.d("DiceManiaTest", "RESPOSTAS BARALHADAS: " + q.getRespostasMisturadas().toString());
-                                Log.d("DiceManiaTest", "CERTA: " + q.getCorrectAnswer());
-                                Log.d("DiceManiaTest", "--------------------------------------------------");
-                            }
-
-                        } catch (Exception e) {
-                            // Se der erro (ex: falta de net), imprime o erro a vermelho
-                            Log.e("DiceManiaTest", "ERRO FATAL NA API: " + e.getMessage());
-                        }
-                    }
-                }).start();
-                // --- FIM DO NOSSO TESTE ---
-
+        // Se já houver um jogador guardado, abre diretamente o ecrã inicial.
+        if (playerRepository.getLocalPlayer() != null) {
+            openHome();
+            return;
         }
 
+        // Apresenta o formulário apenas quando ainda não existe jogador guardado.
+        setContentView(R.layout.activity_main);
+
+        usernameInput = findViewById(R.id.usernameInput);
+
+        Button loginButton = findViewById(R.id.loginButton);
+        loginButton.setOnClickListener(view -> savePlayerAndOpenHome());
     }
+
+    // Valida e guarda o nickname antes de abrir o ecrã inicial.
+    private void savePlayerAndOpenHome() {
+        String nickname = usernameInput.getText().toString().trim();
+
+        if (nickname.isEmpty()) {
+            usernameInput.setError(getString(R.string.enter_nickname_error));
+            return;
+        }
+
+        Player savedPlayer = playerRepository.getLocalPlayer();
+
+        // Mantém o ID se o nickname for o mesmo; cria outro ID se for diferente.
+        String playerId;
+        if (savedPlayer != null
+                && nickname.equals(savedPlayer.getNickname())) {
+            playerId = savedPlayer.getId();
+        } else {
+            playerId = UUID.randomUUID().toString();
+        }
+
+        Player player = new Player(playerId, nickname, 0);
+        playerRepository.saveLocalPlayer(player);
+
+        // O botão Let's Play da HomeActivity é que inicia a partida.
+        openHome();
+    }
+
+    // Abre o ecrã inicial do jogador.
+    private void openHome() {
+        startActivity(new Intent(this, HomeActivity.class));
+        finish();
+    }
+}

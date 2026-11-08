@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="72dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="8dp">
+
+    <ImageView
+            android:id="@+id/leaderboardTrophy"
+            android:layout_width="32dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_trophy"
+            android:contentDescription="@string/leaderboard_trophy_description"
+            android:visibility="invisible" />
+
+    <!-- A posição numérica fica sempre visível, incluindo os três primeiros. -->
+    <TextView
+            android:id="@+id/leaderboardRank"
+            android:layout_width="28dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textColor="@color/white"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/montserrat_extrabold" />
+
+    <TextView
+            android:id="@+id/leaderboardNickname"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="@color/white"
+            android:textSize="23sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/montserrat_bold" />
+
+    <TextView
+            android:id="@+id/leaderboardSeparator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:text="-"
+            android:textColor="@color/white"
+            android:textSize="22sp"
+            android:fontFamily="@font/montserrat_regular" />
+
+    <TextView
+            android:id="@+id/leaderboardScore"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/gold3"
+            android:textSize="19sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/montserrat_bold" />
+
+</LinearLayout>

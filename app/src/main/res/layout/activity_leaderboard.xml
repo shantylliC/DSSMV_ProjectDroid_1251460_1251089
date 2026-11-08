@@ -9,10 +9,11 @@
     <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="TOP 10 DA SEMANA"
-            android:textColor="@color/gold3"
+            android:text="@string/leaderboard_title"
+            android:textColor="@color/white"
             android:textSize="28sp"
             android:textStyle="bold"
+            android:fontFamily="@font/montserrat_extrabold"
             android:gravity="center"
             android:layout_marginBottom="20dp" />
 
@@ -20,13 +21,13 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:textColor="@color/beige">
+            android:textColor="@color/white">
 
         <ListView
                 android:id="@+id/leaderboardList"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:divider="@color/beige"
+                android:divider="@color/white"
                 android:dividerHeight="1dp" />
 
         <TextView
@@ -34,9 +35,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="center"
-                android:text="Ainda não há resultados."
-                android:textColor="@color/beige"
-                android:textSize="18sp" />
+                android:text="@string/leaderboard_empty"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                android:fontFamily="@font/montserrat_bold" />
     </FrameLayout>
 
 </LinearLayout>

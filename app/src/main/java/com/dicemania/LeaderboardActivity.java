@@ -7,6 +7,9 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.content.res.ColorStateList;
+import android.view.ViewGroup;
+import android.widget.ImageView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -50,26 +53,80 @@ public class LeaderboardActivity extends AppCompatActivity {
                 getIntent().getStringArrayListExtra(EXTRA_NICKNAMES);
         int[] scores = getIntent().getIntArrayExtra(EXTRA_SCORES);
 
-        ArrayList<String> rows = new ArrayList<>();
+        ArrayList<Player> players = new ArrayList<>();
 
         if (nicknames != null && scores != null) {
             int count = Math.min(10, Math.min(nicknames.size(), scores.length));
 
-            for (int i = 0; i < count; i++) {
-                rows.add((i + 1) + ".  " + nicknames.get(i)
-                        + " — " + scores[i] + " pontos");
+            for (int index = 0; index < count; index++) {
+                players.add(new Player(
+                        String.valueOf(index + 1),
+                        nicknames.get(index),
+                        scores[index]
+                ));
             }
         }
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(
-                this, android.R.layout.simple_list_item_1, rows) {
+        ArrayAdapter<Player> adapter = new ArrayAdapter<Player>(
+                this,
+                0,
+                players
+        ) {
             @Override
-            public View getView(int position, View convertView,
-                                android.view.ViewGroup parent) {
-                TextView row = (TextView) super.getView(position, convertView, parent);
-                row.setTextColor(getColor(R.color.beige));
-                row.setTextSize(18);
-                row.setPadding(16, 20, 16, 20);
+            public View getView(
+                    int position,
+                    View convertView,
+                    ViewGroup parent
+            ) {
+                View row = convertView;
+
+                if (row == null) {
+                    row = getLayoutInflater().inflate(
+                            R.layout.item_leaderboard,
+                            parent,
+                            false
+                    );
+                }
+
+                ImageView trophy = row.findViewById(R.id.leaderboardTrophy);
+                TextView rank = row.findViewById(R.id.leaderboardRank);
+                TextView nickname = row.findViewById(R.id.leaderboardNickname);
+                TextView score = row.findViewById(R.id.leaderboardScore);
+
+                Player player = getItem(position);
+
+                nickname.setText(player.getNickname());
+                score.setText(getString(
+                        R.string.leaderboard_score,
+                        player.getPlayerScore()
+                ));
+                rank.setVisibility(View.VISIBLE);
+                rank.setText(String.valueOf(position + 1));
+
+                if (position < 3) {
+                    int medalColor;
+
+                    if (position == 0) {
+                        medalColor = R.color.gold3;
+                    } else if (position == 1) {
+                        medalColor = R.color.silver;
+                    } else {
+                        medalColor = R.color.bronze;
+                    }
+
+                    trophy.setVisibility(View.VISIBLE);
+                    trophy.setContentDescription(getString(
+                            R.string.leaderboard_trophy_description,
+                            position + 1
+                    ));
+                    trophy.setImageTintList(
+                            ColorStateList.valueOf(getColor(medalColor))
+                    );
+                } else {
+                    // Reserva o espaço do troféu para alinhar todos os nomes.
+                    trophy.setVisibility(View.INVISIBLE);
+                }
+
                 return row;
             }
         };

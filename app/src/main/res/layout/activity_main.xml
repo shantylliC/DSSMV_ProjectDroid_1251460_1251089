@@ -1,29 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-        <?LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        <?xml version="1.0" encoding="utf-8"?>
 
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:id="@+id/main"
-              android:layout_width="match_parent"
-              android:layout_height="match_parent"
-              android:orientation="vertical"
-              android:gravity="center"
-              android:padding="30dp"
-              android:background="@color/beige">
+
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            android:id="@+id/main"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:background="@color/beige">
+
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="30dp">
 
 
         <ImageView
                 android:id="@+id/gameLogo"
                 android:layout_width="match_parent"
-                android:layout_height="400dp"
+                android:layout_height="420dp"
+                android:scaleType="fitCenter"
                 android:src="@drawable/game_logo_title"
-                android:contentDescription="@string/new_user"/>
+                android:contentDescription="@string/logo_description"/>
 
         <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="40dp"
-                android:text="username"
+                android:fontFamily="@font/montserrat_bold"
+                android:text="@string/nickname_label"
                 android:textSize="25sp"
                 android:textColor="@color/black" />
 
@@ -31,21 +38,22 @@
                 android:id="@+id/usernameInput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="write your nickname"
+                android:fontFamily="@font/montserrat_regular"
+                android:hint="@string/nickname_hint"
                 android:inputType="textPersonName"
                 android:singleLine="true"
                 android:textSize="20sp" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
                 android:id="@+id/loginButton"
                 android:layout_width="match_parent"
                 android:layout_height="80dp"
                 android:layout_marginTop="48dp"
-                android:text="Lets Play!"
-                android:textSize="40sp"
-                android:backgroundTint="@color/pink"
-                android:textColor="@color/black"/>
-
-
-</LinearLayout>
-</androidx.constraintlayout.widget.ConstraintLayout>
+                android:fontFamily="@font/montserrat_extrabold"
+                android:text="@string/lets_play"
+                android:textSize="34sp"
+                android:backgroundTint="@color/dice_dark_blue"
+                android:textColor="@color/white"
+                app:cornerRadius="@dimen/button_corner_radius" />
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="35dp"
+        android:background="@color/dice_dark_blue">
+
+    <TextView
+            android:id="@+id/settingsPlayerName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/white"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/montserrat_bold"
+            android:layout_marginBottom="16dp" />
+
+    <TextView
+            android:id="@+id/settingsBestStreak"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:fontFamily="@font/montserrat_regular"
+            android:layout_marginBottom="8dp" />
+
+    <TextView
+            android:id="@+id/settingsBestScore"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:fontFamily="@font/montserrat_regular"
+            android:layout_marginBottom="20dp"/>
+
+    <!-- Permite desligar os bips e sons de resposta sem afetar a vibração. -->
+    <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/settingsSoundSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/montserrat_bold"
+            android:text="@string/sound_effects_setting"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp" />
+
+    <!-- Permite desligar separadamente a vibração da contagem e do fim do tempo. -->
+    <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/settingsVibrationSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:fontFamily="@font/montserrat_bold"
+            android:text="@string/vibration_setting"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp" />
+
+    <com.google.android.material.button.MaterialButton
+            android:id="@+id/weeklyLeaderboardButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/montserrat_bold"
+            android:text="@string/leaderboard_label"
+            android:textColor="@color/black"
+            android:backgroundTint="@color/white"
+            app:cornerRadius="@dimen/button_corner_radius" />
+
+</LinearLayout>

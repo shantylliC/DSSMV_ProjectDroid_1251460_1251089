@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Permite usar a vibração durante a contagem e quando o tempo termina. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
             android:allowBackup="true"
@@ -12,24 +14,32 @@
             android:supportsRtl="true"
             android:theme="@style/Theme.DiceMania">
 
+        <!-- Mantém a partida em retrato para a rotação não recriar a sessão. -->
         <activity
-                android:name=".RegisterActivity"
+                android:name=".GameActivity"
+                android:screenOrientation="portrait"
+                android:exported="false"
+        />
+
+        <activity
+                android:name=".HomeActivity"
+                android:exported="false"
+        />
+
+        <activity
+                android:name=".LeaderboardActivity"
+                android:exported="false"
+        />
+
+        <activity
+                android:name=".MainActivity"
                 android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity>
 
-        <activity
-                android:name=".QuestionActivity"
-                android:exported="false" />
-
-        <activity
-                android:name=".MainActivity"
-                android:exported="false" />
-
     </application>
-
 </manifest>
-
