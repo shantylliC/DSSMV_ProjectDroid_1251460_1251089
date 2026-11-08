@@ -3,6 +3,11 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="blue">#8095E4</color>
+    <color name="dice_dark_blue">#080D1D</color>
+    <color name="progress_track">#55FFFFFF</color>
+    <color name="streak_flame_idle">#8591A3</color>
+    <color name="streak_flame_warm">#FFFFD180</color>
+    <color name="streak_flame_hot">#FFFF3D00</color>
     <color name="green">#1BC0BA</color>
     <color name="green2">#00AB66</color>
     <color name="yellow">#FEBD17</color>
@@ -15,6 +20,8 @@
     <color name="gold1">#ffff94</color>
     <color name="gold2">#f9db5c</color>
     <color name="gold3">#efb810</color>
+    <color name="silver">#C0C0C0</color>
+    <color name="bronze">#CD7F32</color>
     <color name="streak1">#CA5CDD</color>
     <color name="streak2">#BE2ED6</color>
     <color name="streak3">#B100CD</color>

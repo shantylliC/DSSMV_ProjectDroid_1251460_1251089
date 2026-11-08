@@ -49,20 +49,17 @@ public class AndroidShakeSensor implements ShakeSensor, SensorEventListener {
     }
 
     @Override
-    public void stopListening(){
-
-        this.callback = callback;
-
-        if (sensorManager != null){
-
+    public void stopListening() {
+        if (sensorManager != null) {
             sensorManager.unregisterListener(this);
         }
+        callback = null;
     }
 
     @Override
     public void onSensorChanged(SensorEvent event){
 
-        if (callback != null){
+        if (callback == null){
 
             return;
         }
@@ -75,7 +72,7 @@ public class AndroidShakeSensor implements ShakeSensor, SensorEventListener {
         float gY = y / SensorManager.GRAVITY_EARTH;
         float gZ = z / SensorManager.GRAVITY_EARTH;
 
-        float gForce = (float) Math.sqrt(gX * gX * gY * gY * gZ * gZ);
+        float gForce = (float) Math.sqrt(gX * gX + gY * gY + gZ * gZ);
 
 
 

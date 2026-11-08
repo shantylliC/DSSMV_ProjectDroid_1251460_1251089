@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/dice_dark_blue"
+        android:padding="20dp">
+
+    <!-- Divide a zona superior em duas colunas iguais. -->
+    <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/summaryCenterGuide"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.5" />
+
+    <!-- Identifica o dado que escolheu a categoria. -->
+    <TextView
+            android:id="@+id/summaryQuestionLabel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="56dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:gravity="center"
+            android:text="@string/label_question"
+            android:textColor="@color/white"
+            android:textSize="22sp"
+            android:fontFamily="@font/montserrat_bold"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/summaryCenterGuide" />
+
+    <!-- Identifica o dado que escolheu o formato de resposta. -->
+    <TextView
+            android:id="@+id/summaryAnswerLabel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="56dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="12dp"
+            android:gravity="center"
+            android:text="@string/label_answer"
+            android:textColor="@color/white"
+            android:textSize="22sp"
+            android:fontFamily="@font/montserrat_bold"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toEndOf="@id/summaryCenterGuide"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Mostra o número que saiu no dado Question. -->
+    <TextView
+            android:id="@+id/summaryQuestionDie"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:gravity="center"
+            android:textColor="@color/white"
+            android:textSize="40sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/montserrat_extrabold"
+            app:layout_constraintTop_toBottomOf="@id/summaryQuestionLabel"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/summaryCenterGuide" />
+
+    <!-- Mostra o número que saiu no dado Answer. -->
+    <TextView
+            android:id="@+id/summaryAnswerDie"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="12dp"
+            android:gravity="center"
+            android:textColor="@color/white"
+            android:textSize="40sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/montserrat_extrabold"
+            app:layout_constraintTop_toBottomOf="@id/summaryAnswerLabel"
+            app:layout_constraintStart_toEndOf="@id/summaryCenterGuide"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Mostra a categoria escolhida pelo dado Question. -->
+    <TextView
+            android:id="@+id/summaryQuestionType"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:gravity="center"
+            android:textColor="@color/white"
+            android:textSize="22sp"
+            android:fontFamily="@font/montserrat_regular"
+            app:layout_constraintTop_toBottomOf="@id/summaryQuestionDie"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/summaryCenterGuide" />
+
+    <!-- Mostra o formato escolhido pelo dado Answer. -->
+    <TextView
+            android:id="@+id/summaryAnswerType"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="12dp"
+            android:gravity="center"
+            android:textColor="@color/white"
+            android:textSize="22sp"
+            android:fontFamily="@font/montserrat_regular"
+            app:layout_constraintTop_toBottomOf="@id/summaryAnswerDie"
+            app:layout_constraintStart_toEndOf="@id/summaryCenterGuide"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Calcula o fundo dos dois textos superiores para posicionar a contagem. -->
+    <androidx.constraintlayout.widget.Barrier
+            android:id="@+id/summaryTopContentBottom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:barrierDirection="bottom"
+            app:constraint_referenced_ids="summaryQuestionType,summaryAnswerType" />
+
+
+    <!-- Mostra a posição atual na partida. -->
+    <TextView
+            android:id="@+id/summaryQuestionNumber"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="12dp"
+            android:gravity="center"
+            android:textColor="@color/white"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/montserrat_extrabold"
+            app:layout_constraintTop_toBottomOf="@id/summaryTopContentBottom"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+    />
+
+    <!-- Mostra visualmente o progresso da partida por baixo do contador. -->
+    <ProgressBar
+            android:id="@+id/summaryProgress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="0dp"
+            android:layout_height="8dp"
+            android:layout_marginStart="52dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="52dp"
+            android:layout_marginBottom="20dp"
+            android:max="15"
+            android:indeterminate="false"
+            android:progress="1"
+            android:progressTint="@color/hot_pink"
+            android:progressBackgroundTint="@color/progress_track"
+            app:layout_constraintTop_toBottomOf="@id/summaryQuestionNumber"
+            app:layout_constraintBottom_toTopOf="@id/summaryScore"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- A pontuação fica no canto inferior esquerdo. -->
+    <TextView
+            android:id="@+id/summaryScore"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="28dp"
+            android:gravity="start"
+            android:textColor="@color/white"
+            android:textSize="20sp"
+            android:fontFamily="@font/montserrat_bold"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/summaryCenterGuide" />
+
+    <!-- O ícone de fogo e o streak ficam juntos no canto inferior direito. -->
+    <LinearLayout
+            android:id="@+id/summaryStreakGroup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="4dp"
+            android:layout_marginBottom="28dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+                android:id="@+id/summaryStreakFlame"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_flame"
+                android:contentDescription="@string/streak_flame_description" />
+
+        <TextView
+                android:id="@+id/summaryStreak"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textColor="@color/white"
+                android:textSize="20sp"
+                android:fontFamily="@font/montserrat_bold" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

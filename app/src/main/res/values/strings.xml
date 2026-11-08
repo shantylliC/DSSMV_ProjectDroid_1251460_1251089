@@ -1,4 +1,53 @@
 <resources>
     <string name="app_name" translatable="false">Dice Mania</string>
-    <string name="new_user" translatable="false">Novo Utilizador</string>
+    <string name="new_user">New player</string>
+    <string name="logo_description">Dice Mania logo</string>
+    <string name="nickname_label">Nickname</string>
+    <string name="nickname_hint">Enter your nickname</string>
+    <string name="enter_nickname_error">Please enter your nickname.</string>
+    <string name="lets_play">Let\'s Play!</string>
+    <string name="settings_description">Settings</string>
+    <string name="nickname_value">Nickname: %1$s</string>
+    <string name="best_streak_value">Best streak: %1$d</string>
+    <string name="best_score_value">Best score: %1$d</string>
+    <string name="leaderboard_all_time">Best of All Time</string>
+    <string name="leaderboard_label">Leaderboard</string>
+    <string name="leaderboard_unavailable">The leaderboard will be connected after integration with the main branch.</string>
+    <string name="leaderboard_title">TOP 10 — BEST OF ALL TIME</string>
+    <string name="leaderboard_empty">No Dice Mania Masters yet!</string>
+    <string name="leaderboard_score">%1$d pts</string>
+    <string name="leaderboard_trophy_description">Trophy for rank %1$d</string>
+    <string name="streak_flame_description">Flame showing your current streak</string>
+    <string name="sound_effects_setting">Sound effects</string>
+    <string name="vibration_setting">Vibration</string>
+
+    <string name="label_question">Question</string>
+    <string name="label_answer">Answer</string>
+
+    <string name="summary_die_number">No. %1$d</string>
+    <string name="summary_question_counter">Question %1$d/%2$d</string>
+
+    <string name="shake_instruction">Shake your phone to roll the dice!</string>
+    <string name="loading_questions">Loading questions…</string>
+    <string name="question_load_failed">Could not load three questions. Please try again.</string>
+    <string name="dice_result">Dice: %1$d and %2$d</string>
+    <string name="category_result">Category: %1$s</string>
+    <string name="format_result">Format: %1$s</string>
+    <string name="question_number">Question %1$d of 15</string>
+    <string name="streak_value">Streak: %1$d</string>
+    <string name="score_value">Score: %1$d</string>
+    <string name="seconds_value">%1$d</string>
+    <string name="game_finished">Game over</string>
+    <string name="final_score">Final score: %1$d</string>
+    <string name="close">Close</string>
+    <string name="category_art">Art</string>
+    <string name="category_science">Science &amp; Nature</string>
+    <string name="category_history">History</string>
+    <string name="category_cinema">Film</string>
+    <string name="category_games">Video Games</string>
+    <string name="category_music">Music</string>
+    <string name="category_general">General Knowledge</string>
+    <string name="format_true_false">True or False</string>
+    <string name="format_multiple_choice">Multiple Choice</string>
+
 </resources>
