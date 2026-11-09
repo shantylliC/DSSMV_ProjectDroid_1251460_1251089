@@ -10,6 +10,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.dicemania.data.local.SharedPreferencePlayerRepository;
@@ -27,6 +28,9 @@ public class HomeActivity extends AppCompatActivity {
     // Identidade local usada pela partida e pelo painel de definições.
     private Player player;
 
+    // Repositório usado para recuperar ou terminar a sessão local do jogador.
+    private SharedPreferencePlayerRepository playerRepository;
+
     // Recordes locais usados para mostrar e reenviar os valores ao servidor.
     private PlayerStatsRepository playerStatsRepository;
 
@@ -42,7 +46,7 @@ public class HomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_home);
 
         // Recupera o jogador guardado quando fez login.
-        SharedPreferencePlayerRepository playerRepository = new SharedPreferencePlayerRepository(this);
+        playerRepository = new SharedPreferencePlayerRepository(this);
         player = playerRepository.getLocalPlayer();
 
         // Se não houver jogador guardado, regressa ao ecrã de login.
@@ -145,6 +149,7 @@ public class HomeActivity extends AppCompatActivity {
                 panel.findViewById(R.id.settingsVibrationSwitch);
         Button leaderboardButton =
                 panel.findViewById(R.id.weeklyLeaderboardButton);
+        Button logoutButton = panel.findViewById(R.id.logoutButton);
 
         // Mostra as opções guardadas sem gravar alterações durante a inicialização.
         soundSwitch.setChecked(GameFeedbackEffects.isSoundEnabled(this));
@@ -190,8 +195,40 @@ public class HomeActivity extends AppCompatActivity {
             startActivity(new Intent(this, LeaderboardActivity.class));
         });
 
+        // Pede confirmação antes de terminar a sessão guardada neste dispositivo.
+        logoutButton.setOnClickListener(view -> showLogoutConfirmation(dialog));
+
         dialog.setContentView(panel);
         dialog.show();
 
+    }
+
+    // Confirma a saída e explica que os recordes não serão apagados.
+    private void showLogoutConfirmation(BottomSheetDialog settingsDialog) {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.logout_confirmation_title)
+                .setMessage(R.string.logout_confirmation_message)
+                .setNegativeButton(R.string.logout_cancel, (dialog, which) ->
+                        dialog.dismiss()
+                )
+                .setPositiveButton(R.string.logout, (dialog, which) -> {
+                    settingsDialog.dismiss();
+                    logout();
+                })
+                .show();
+    }
+
+    // Apaga apenas o ID e o nickname locais e regressa ao ecrã de login.
+    private void logout() {
+        playerRepository.clearLocalPlayer();
+
+        // Limpa a navegação anterior para o botão Voltar não reabrir a Home.
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK
+                        | Intent.FLAG_ACTIVITY_CLEAR_TASK
+        );
+        startActivity(intent);
+        finish();
     }
 }

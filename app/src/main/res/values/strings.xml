@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name" translatable="false">Dice Mania</string>
     <string name="new_user">New player</string>
-    <string name="logo_description">Dice Mania logo</string>
+    <string name="logo_description">Dice Mania logo. Tap five times quickly to toggle test mode.</string>
     <string name="nickname_label">Nickname</string>
     <string name="nickname_hint">Enter your nickname (max 9 characters)</string>
     <string name="enter_nickname_error">To continue you need to have a Nickname!</string>
@@ -15,7 +15,7 @@
     <string name="leaderboard_title">TOP 10 — BEST OF ALL TIME</string>
     <string name="leaderboard_empty">No Dice Mania Masters yet!</string>
     <string name="leaderboard_loading">Loading leaderboard…</string>
-    <string name="leaderboard_load_failed">Could not load the leaderboard.\n%1$s</string>
+    <string name="leaderboard_load_failed">The Positions for the Dice Master\'s are not Available. Try Again!</string>
     <string name="leaderboard_unknown_error">Unknown network error.</string>
     <string name="leaderboard_retry">Try again</string>
     <string name="leaderboard_player_is_dice_master">You are a Dice Master!</string>
@@ -26,6 +26,10 @@
     <string name="sound_effects_setting">Sound effects</string>
     <string name="background_music_setting">Background music</string>
     <string name="vibration_setting">Vibration</string>
+    <string name="logout">Log out</string>
+    <string name="logout_confirmation_title">Log out?</string>
+    <string name="logout_confirmation_message">Are you sure you want to log out? Your local profile will be removed from this device, but your leaderboard entry will remain. Logging in again creates a new player ID.</string>
+    <string name="logout_cancel">Cancel</string>
 
     <string name="label_question">Question</string>
     <string name="label_answer">Answer</string>
@@ -34,8 +38,14 @@
     <string name="summary_question_counter">Question %1$d/%2$d</string>
 
     <string name="shake_instruction">Shake your phone to roll the dice!</string>
+    <string name="shake_idle_motivation">Come on, roll it! So you can become a Dice Master!</string>
     <string name="loading_questions">Loading questions…</string>
-    <string name="question_load_failed">Could not load three questions. Please try again.</string>
+    <string name="question_load_failed">Opsss! The Dices fell of the Table. Try Again!</string>
+    <string name="question_die_animation_description">Question die animation</string>
+    <string name="answer_die_animation_description">Answer die animation</string>
+    <string name="summary_progress_description">Question %1$d of %2$d</string>
+    <string name="question_timer_description">Time remaining: %1$d seconds</string>
+    <string name="leaderboard_list_description">Top 10 all-time leaderboard</string>
     <string name="dice_result">Dice: %1$d and %2$d</string>
     <string name="category_result">Category: %1$s</string>
     <string name="format_result">Format: %1$s</string>

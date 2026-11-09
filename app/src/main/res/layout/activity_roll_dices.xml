@@ -17,17 +17,19 @@
             android:fontFamily="@font/montserrat_extrabold"
             android:gravity="center"
             android:text="@string/shake_instruction"
+            android:accessibilityLiveRegion="polite"
             android:textColor="@color/white"
-            android:textSize="34sp"
+            android:textSize="28sp"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 
     <com.airbnb.lottie.LottieAnimationView
             android:id="@+id/lottieDiceAnimationInvertido"
-            android:layout_width="248dp"
-            android:layout_height="229dp"
+            android:layout_width="@dimen/right_dice_width"
+            android:layout_height="@dimen/right_dice_height"
             android:scaleX="-1"
+            android:contentDescription="@string/answer_die_animation_description"
             app:lottie_rawRes="@raw/dice_animation"
             app:lottie_autoPlay="false"
             app:lottie_loop="false"
@@ -39,8 +41,9 @@
 
     <com.airbnb.lottie.LottieAnimationView
             android:id="@+id/lottieDiceAnimation"
-            android:layout_width="252dp"
-            android:layout_height="233dp"
+            android:layout_width="@dimen/left_dice_width"
+            android:layout_height="@dimen/left_dice_height"
+            android:contentDescription="@string/question_die_animation_description"
             app:lottie_rawRes="@raw/dice_animation"
             app:lottie_autoPlay="false"
             app:lottie_loop="false"

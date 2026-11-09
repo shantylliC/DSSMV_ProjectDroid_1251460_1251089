@@ -231,10 +231,8 @@ public class LeaderboardActivity extends AppCompatActivity {
     private void showError(String errorMessage) {
         loadingPanel.setVisibility(View.GONE);
         leaderboardList.setVisibility(View.GONE);
-        statusMessage.setText(getString(
-                R.string.leaderboard_load_failed,
-                errorMessage == null ? getString(R.string.leaderboard_unknown_error) : errorMessage
-        ));
+        // Mantém a mensagem pedida simples e consistente; os detalhes técnicos ficam no callback.
+        statusMessage.setText(R.string.leaderboard_load_failed);
         statusMessage.setVisibility(View.VISIBLE);
         retryButton.setVisibility(View.VISIBLE);
     }

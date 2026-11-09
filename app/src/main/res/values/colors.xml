@@ -10,6 +10,9 @@
     <color name="streak_flame_hot">#FFFF3D00</color>
     <color name="green">#1BC0BA</color>
     <color name="green2">#00AB66</color>
+    <!-- Tons mais escuros para manter contraste com texto branco no feedback de resposta. -->
+    <color name="answer_correct_accessible">#007A48</color>
+    <color name="answer_incorrect_accessible">#C62828</color>
     <color name="yellow">#FEBD17</color>
     <color name="hot_pink">#F94680</color>
     <color name="red">#EC3024</color>

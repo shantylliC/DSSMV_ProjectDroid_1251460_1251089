@@ -26,18 +26,21 @@
                 android:contentDescription="@string/logo_description"/>
 
         <TextView
+                android:id="@+id/nicknameLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="40dp"
                 android:fontFamily="@font/montserrat_bold"
                 android:text="@string/nickname_label"
                 android:textSize="25sp"
-                android:textColor="@color/black" />
+                android:textColor="@color/black"
+                android:labelFor="@id/usernameInput" />
 
         <EditText
                 android:id="@+id/usernameInput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:minHeight="48dp"
                 android:fontFamily="@font/montserrat_regular"
                 android:hint="@string/nickname_hint"
                 android:inputType="textPersonName"
@@ -47,8 +50,11 @@
         <com.google.android.material.button.MaterialButton
                 android:id="@+id/loginButton"
                 android:layout_width="match_parent"
-                android:layout_height="80dp"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
                 android:layout_marginTop="48dp"
+                android:paddingTop="16dp"
+                android:paddingBottom="16dp"
                 android:fontFamily="@font/montserrat_extrabold"
                 android:text="@string/lets_play"
                 android:textSize="34sp"

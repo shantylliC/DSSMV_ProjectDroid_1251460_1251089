@@ -129,6 +129,7 @@
             android:layout_width="2dp"
             android:layout_height="0dp"
             android:background="@color/white"
+            android:importantForAccessibility="no"
             app:layout_constraintStart_toStartOf="@id/summaryCenterGuide"
             app:layout_constraintTop_toTopOf="@id/summaryQuestionLabel"
             app:layout_constraintBottom_toBottomOf="@id/summaryTopContentBottom" />

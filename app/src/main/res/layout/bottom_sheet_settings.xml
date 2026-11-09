@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<ScrollView
         xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:app="http://schemas.android.com/apk/res-auto"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="35dp"
+        android:fillViewport="false"
         android:background="@color/dice_dark_blue">
+
+    <!-- Permite percorrer as definições em ecrãs baixos ou com texto ampliado. -->
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
 
     <TextView
             android:id="@+id/settingsPlayerName"
@@ -41,6 +47,7 @@
             android:id="@+id/settingsSoundSwitch"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:minHeight="48dp"
             android:fontFamily="@font/montserrat_bold"
             android:text="@string/sound_effects_setting"
             android:textColor="@color/white"
@@ -53,6 +60,7 @@
             android:id="@+id/settingsMusicSwitch"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:minHeight="48dp"
             android:fontFamily="@font/montserrat_bold"
             android:text="@string/background_music_setting"
             android:textColor="@color/white"
@@ -65,6 +73,7 @@
             android:id="@+id/settingsVibrationSwitch"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:minHeight="48dp"
             android:layout_marginBottom="16dp"
             android:fontFamily="@font/montserrat_bold"
             android:text="@string/vibration_setting"
@@ -77,10 +86,28 @@
             android:id="@+id/weeklyLeaderboardButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:minHeight="48dp"
             android:fontFamily="@font/montserrat_bold"
             android:text="@string/leaderboard_label"
             android:textColor="@color/black"
             android:backgroundTint="@color/white"
             app:cornerRadius="@dimen/button_corner_radius" />
 
-</LinearLayout>
+    <!-- Termina a sessão local sem apagar a pontuação nem os recordes do jogador. -->
+    <com.google.android.material.button.MaterialButton
+            android:id="@+id/logoutButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:layout_marginTop="12dp"
+            android:fontFamily="@font/montserrat_bold"
+            android:text="@string/logout"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:backgroundTint="@android:color/transparent"
+            app:cornerRadius="@dimen/button_corner_radius"
+            app:strokeColor="@color/white"
+            app:strokeWidth="1dp" />
+
+    </LinearLayout>
+</ScrollView>

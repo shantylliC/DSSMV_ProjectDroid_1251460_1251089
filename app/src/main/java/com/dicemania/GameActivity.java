@@ -12,10 +12,10 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 import android.content.res.ColorStateList;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.view.Gravity;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 // Controla os ecrãs da partida: abanão, resumo e pergunta. Mantém uma só Activity ativa e troca o layout apresentado.
 public class GameActivity extends AppCompatActivity implements GameSessionListener {
@@ -94,6 +95,21 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
     // Agenda a passagem ao ecrã seguinte depois do feedback visual.
     private final Handler feedbackHandler = new Handler(Looper.getMainLooper());
 
+    // Lembra o jogador de lançar os dados depois de 15 segundos sem atividade.
+    private static final long SHAKE_IDLE_PROMPT_DELAY_MS = 15000L;
+    private final Handler idlePromptHandler = new Handler(Looper.getMainLooper());
+    private Runnable idlePromptRunnable;
+
+    // Identifica cada lançamento para descartar respostas de pedidos/animações antigos.
+    private volatile long rollAttemptId;
+    private Future<?> questionLoadTask;
+
+    // A Activity só aceita resultados e animações enquanto está visível.
+    private boolean activityResumed;
+    private boolean lifecyclePaused;
+    private boolean sensorNeedsResume;
+    private long pauseStartedAtElapsedRealtime;
+
     // Impede que o jogador responda várias vezes à mesma pergunta.
     private boolean answerLocked;
 
@@ -140,11 +156,21 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
     @Override
     public void onRollDetected() {
         // O sensor chama este callback na interface Android.
+        if (!activityResumed || isFinishing() || isDestroyed()) {
+            // Evita iniciar uma ronda se um evento do sensor chegar durante a transição do ecrã.
+            if (gameSession != null) {
+                gameSession.onBlockLoadFailed();
+                sensorNeedsResume = true;
+            }
+            return;
+        }
         beginRollAndLoadQuestions();
     }
 
-    //Sorteia os resultados, inicia os dados e pede três perguntas.
+    // Sorteia os resultados, inicia os dados e pede três perguntas.
     private void beginRollAndLoadQuestions() {
+        cancelIdlePrompt();
+        final long attemptId = ++rollAttemptId;
         animationFinished = false;
         questionsLoaded = false;
         finishedAnimations = 0;
@@ -159,6 +185,8 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
         currentType = secondDiceNumber <= 3
                 ? QuestionType.TRUE_FALSE
                 : QuestionType.MULTIPLE_CHOICE;
+        final Category requestedCategory = currentCategory;
+        final QuestionType requestedType = currentType;
 
         TextView status = findViewById(R.id.instructionText);
         status.setText(R.string.loading_questions);
@@ -169,26 +197,45 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
                 findViewById(R.id.lottieDiceAnimationInvertido);
 
         // Espera as duas animações antes de abrir o resumo.
-        addAnimationEndListener(leftDice);
-        addAnimationEndListener(rightDice);
+        addAnimationEndListener(leftDice, attemptId);
+        addAnimationEndListener(rightDice, attemptId);
 
         leftDice.playAnimation();
         rightDice.playAnimation();
         // Mantém um som em loop durante a animação e pára quando os dois dados terminarem.
         feedbackEffects.playDiceRoll();
 
-        // RetrofitQuestionRepository usa execute(), por isso corre fora da UI.
-        networkExecutor.execute(() -> {
-            List<Question> result = questionRepository.getQuestions(
-                    currentCategory,
-                    currentType,
-                    3
-            );
+        // Reabre a API e executa execute() fora da UI, sem bloquear a animação.
+        questionRepository.resumeRequests();
+        questionLoadTask = networkExecutor.submit(() -> {
+            if (attemptId != rollAttemptId || Thread.currentThread().isInterrupted()) {
+                return;
+            }
+
+            List<Question> loadedQuestions;
+            try {
+                loadedQuestions = questionRepository.getQuestions(
+                        requestedCategory,
+                        requestedType,
+                        3
+                );
+            } catch (RuntimeException error) {
+                // Uma falha inesperada segue o mesmo caminho de uma resposta sem perguntas.
+                loadedQuestions = null;
+            }
+            final List<Question> result = loadedQuestions;
 
             runOnUiThread(() -> {
-                if (isFinishing() || isDestroyed()) {
+                // O identificador impede uma resposta antiga de aparecer depois de um bloqueio.
+                if (attemptId != rollAttemptId
+                        || !activityResumed
+                        || isFinishing()
+                        || isDestroyed()
+                        || gameSession == null
+                        || gameSession.getState() != GameState.LOADING_BLOCK) {
                     return;
                 }
+                questionLoadTask = null;
 
                 if (result == null || result.size() != 3) {
                     handleQuestionLoadFailure();
@@ -202,8 +249,8 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
         });
     }
 
-    // Soma os finais das duas animações. O loop tem de estar desligado no XML para este evento ocorrer.
-    private void addAnimationEndListener(LottieAnimationView view) {
+    // Soma os finais das duas animações sem aceitar eventos de um lançamento cancelado.
+    private void addAnimationEndListener(LottieAnimationView view, long attemptId) {
         view.addAnimatorListener(new Animator.AnimatorListener() {
             private boolean alreadyCounted;
 
@@ -212,7 +259,11 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
 
             @Override
             public void onAnimationEnd(Animator animation) {
-                if (alreadyCounted) {
+                if (alreadyCounted
+                        || attemptId != rollAttemptId
+                        || !activityResumed
+                        || gameSession == null
+                        || gameSession.getState() != GameState.LOADING_BLOCK) {
                     return;
                 }
 
@@ -247,15 +298,11 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
     // Mostra uma mensagem e volta a ouvir o sensor se o pedido falhar.
     private void handleQuestionLoadFailure() {
         feedbackEffects.stopDiceRoll();
-
-        Toast.makeText(
-                this,
-                R.string.question_load_failed,
-                Toast.LENGTH_LONG
-        ).show();
-
         gameSession.onBlockLoadFailed();
         showRollScreen();
+        // Deixa a mensagem visível e permite começar imediatamente outro lançamento.
+        TextView instruction = findViewById(R.id.instructionText);
+        instruction.setText(R.string.question_load_failed);
         gameSession.listenForNextRoll();
     }
 
@@ -292,13 +339,20 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
         answerType.setText(formatName(currentType));
 
         // Mostra o número da pergunta, a pontuação e o streak atuais.
+        int currentQuestionNumber = gameSession.getCurrentQuestionIndex() + 1;
+        int totalQuestionCount = gameSession.getTotalQuestionCount();
         questionNumber.setText(getString(
                 R.string.summary_question_counter,
-                gameSession.getCurrentQuestionIndex() + 1,
-                gameSession.getTotalQuestionCount()
+                currentQuestionNumber,
+                totalQuestionCount
         ));
-        progress.setMax(gameSession.getTotalQuestionCount());
-        progress.setProgress(gameSession.getCurrentQuestionIndex() + 1);
+        progress.setMax(totalQuestionCount);
+        progress.setProgress(currentQuestionNumber);
+        progress.setContentDescription(getString(
+                R.string.summary_progress_description,
+                currentQuestionNumber,
+                totalQuestionCount
+        ));
         int currentStreak = gameSession.getCurrentStreak();
         streak.setText(getString(
                 R.string.streak_value,
@@ -383,8 +437,12 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
 
             MaterialButton answerButton = new MaterialButton(this);
             answerButton.setText(answer);
+            answerButton.setContentDescription(answer);
             answerButton.setAllCaps(false);
             answerButton.setTextSize(20);
+            answerButton.setMinHeight(getResources().getDimensionPixelSize(
+                    R.dimen.minimum_touch_target
+            ));
             answerButton.setCornerRadius(getResources().getDimensionPixelSize(
                     R.dimen.button_corner_radius
             ));
@@ -397,13 +455,24 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
             answerButton.setBackgroundTintList(
                     ColorStateList.valueOf(getColor(R.color.pink))
             );
-            answerButton.setPadding(20, 12, 20, 12);
+            int horizontalPadding = getResources().getDimensionPixelSize(
+                    R.dimen.answer_button_padding_horizontal
+            );
+            int verticalPadding = getResources().getDimensionPixelSize(
+                    R.dimen.answer_button_padding_vertical
+            );
+            answerButton.setPadding(
+                    horizontalPadding,
+                    verticalPadding,
+                    horizontalPadding,
+                    verticalPadding
+            );
 
-            // Altura zero e peso um: todos os botões dividem igualmente o espaço.
+            // Os botões partilham o espaço livre, mas podem crescer quando o texto está ampliado.
             LinearLayout.LayoutParams params =
                     new LinearLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
-                            0,
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
                             1f
                     );
 
@@ -423,15 +492,25 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
 
     // Inicia o temporizador de resposta e atualiza o texto a cada segundo.
     private void startQuestionTimer(TextView timerView) {
-        secondsRemaining = QUESTION_TIME_SECONDS;
+        startQuestionTimer(timerView, QUESTION_TIME_SECONDS);
+    }
+
+    // Retoma o temporizador com o tempo restante depois de a Activity voltar ao primeiro plano.
+    private void startQuestionTimer(TextView timerView, int startingSeconds) {
+        secondsRemaining = startingSeconds;
         lastCountdownFeedbackSecond = -1;
+        timerView.setText(getString(R.string.seconds_value, secondsRemaining));
+        timerView.setContentDescription(getString(
+                R.string.question_timer_description,
+                secondsRemaining
+        ));
 
         if (questionTimer != null) {
             questionTimer.cancel();
         }
 
         questionTimer = new CountDownTimer(
-                QUESTION_TIME_SECONDS * 1000L,
+                startingSeconds * 1000L,
                 1000L
         ) {
             @Override
@@ -439,6 +518,10 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
                 secondsRemaining = (int) ((millisUntilFinished + 999) / 1000);
                 timerView.setText(getString(
                         R.string.seconds_value,
+                        secondsRemaining
+                ));
+                timerView.setContentDescription(getString(
+                        R.string.question_timer_description,
                         secondsRemaining
                 ));
 
@@ -453,34 +536,48 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
 
             @Override
             public void onFinish() {
-                if (answerLocked
-                        || gameSession.getState() != GameState.PLAYING_QUESTION) {
-                    return;
-                }
-
-                answerLocked = true;
-                secondsRemaining = 0;
-
-                // Assinala o fim do tempo com um alarme curto e uma vibração longa.
-                feedbackEffects.playTimeoutFeedback();
-
-                Question question = gameSession.getCurrentQuestion();
-                if (question == null) {
-                    continueAfterAnswer();
-                    return;
-                }
-
-                String correctAnswer = decodeHtml(question.getCorrectAnswer());
-
-                gameSession.processTimeout();
-                showAnswerFeedback(correctAnswer);
-
-                feedbackHandler.postDelayed(
-                        GameActivity.this::continueAfterAnswer,
-                        ANSWER_FEEDBACK_DELAY_MS
-                );
+                timerView.setContentDescription(getString(
+                        R.string.question_timer_description,
+                        0
+                ));
+                handleQuestionTimeout();
             }
         }.start();
+    }
+
+    // Aplica a mesma penalização e feedback quando o tempo termina em primeiro plano ou ao regressar.
+    private void handleQuestionTimeout() {
+        if (answerLocked
+                || gameSession == null
+                || gameSession.getState() != GameState.PLAYING_QUESTION) {
+            return;
+        }
+
+        answerLocked = true;
+        secondsRemaining = 0;
+        TextView timer = findViewById(R.id.questionTimer);
+        if (timer != null) {
+            timer.setText(getString(R.string.seconds_value, 0));
+            timer.setContentDescription(getString(
+                    R.string.question_timer_description,
+                    0
+            ));
+        }
+        feedbackEffects.playTimeoutFeedback();
+
+        Question question = gameSession.getCurrentQuestion();
+        if (question == null) {
+            continueAfterAnswer();
+            return;
+        }
+
+        String correctAnswer = decodeHtml(question.getCorrectAnswer());
+        gameSession.processTimeout();
+        showAnswerFeedback(correctAnswer);
+        feedbackHandler.postDelayed(
+                this::continueAfterAnswer,
+                ANSWER_FEEDBACK_DELAY_MS
+        );
     }
 
 
@@ -535,8 +632,8 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
                     answerButton.getText().toString().equals(correctAnswer);
 
             int color = isCorrect
-                    ? getColor(R.color.green2)
-                    : getColor(R.color.red);
+                    ? getColor(R.color.answer_correct_accessible)
+                    : getColor(R.color.answer_incorrect_accessible);
 
             answerButton.setEnabled(false);
             answerButton.setTextColor(getColor(R.color.white));
@@ -588,6 +685,72 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
     // Volta a apresentar o ecrã dos dados.
     private void showRollScreen() {
         setContentView(R.layout.activity_roll_dices);
+        TextView instruction = findViewById(R.id.instructionText);
+        instruction.setText(R.string.shake_instruction);
+        scheduleIdlePrompt();
+    }
+
+    // Agenda a mensagem motivacional enquanto a sessão continua à espera de um abanão.
+    private void scheduleIdlePrompt() {
+        cancelIdlePrompt();
+        idlePromptRunnable = () -> {
+            if (!activityResumed
+                    || isFinishing()
+                    || isDestroyed()
+                    || (gameSession != null
+                    && gameSession.getState() != GameState.WAITING_FOR_ROLL)) {
+                return;
+            }
+
+            TextView instruction = findViewById(R.id.instructionText);
+            if (instruction != null) {
+                instruction.setText(R.string.shake_idle_motivation);
+            }
+        };
+        idlePromptHandler.postDelayed(idlePromptRunnable, SHAKE_IDLE_PROMPT_DELAY_MS);
+    }
+
+    // Remove a mensagem pendente assim que o jogador abana ou deixa este ecrã.
+    private void cancelIdlePrompt() {
+        if (idlePromptRunnable != null) {
+            idlePromptHandler.removeCallbacks(idlePromptRunnable);
+            idlePromptRunnable = null;
+        }
+    }
+
+    // Cancela o lançamento parcial, incluindo o pedido HTTP, animações e som dos dados.
+    private void cancelInterruptedRoll() {
+        ++rollAttemptId;
+
+        if (questionLoadTask != null) {
+            questionLoadTask.cancel(true);
+            questionLoadTask = null;
+        }
+        if (questionRepository != null) {
+            questionRepository.cancelPendingRequests();
+        }
+
+        LottieAnimationView leftDice = findViewById(R.id.lottieDiceAnimation);
+        LottieAnimationView rightDice = findViewById(R.id.lottieDiceAnimationInvertido);
+        if (leftDice != null) {
+            leftDice.cancelAnimation();
+        }
+        if (rightDice != null) {
+            rightDice.cancelAnimation();
+        }
+
+        if (feedbackEffects != null) {
+            feedbackEffects.stopDiceRoll();
+        }
+        animationFinished = false;
+        questionsLoaded = false;
+        finishedAnimations = 0;
+        pendingQuestions = null;
+
+        // O próximo abanão começa uma tentativa limpa com um novo par de dados.
+        if (gameSession != null) {
+            gameSession.onBlockLoadFailed();
+        }
     }
 
     // Converte o número do primeiro dado numa das seis categorias do jogo.
@@ -631,39 +794,107 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
         ).toString();
     }
 
-    // Avisa a GameSession quando a aplicação vai para segundo plano.
+    // Pausa os temporizadores e cancela qualquer lançamento que ainda esteja a carregar.
     @Override
     protected void onPause() {
+        activityResumed = false;
+        lifecyclePaused = true;
+        cancelIdlePrompt();
+        feedbackHandler.removeCallbacksAndMessages(null);
+
+        if (screenTimer != null) {
+            screenTimer.cancel();
+            screenTimer = null;
+        }
+
+        GameState stateWhenPaused = gameSession == null
+                ? null
+                : gameSession.getState();
+
+        if (questionTimer != null) {
+            questionTimer.cancel();
+            questionTimer = null;
+        }
+        pauseStartedAtElapsedRealtime = stateWhenPaused == GameState.PLAYING_QUESTION
+                ? SystemClock.elapsedRealtime()
+                : 0L;
+
         if (gameSession != null) {
             gameSession.notifyAppMinimized();
         }
+
+        if (stateWhenPaused == GameState.LOADING_BLOCK) {
+            // Um pedido ou animação interrompidos nunca podem concluir-se ao regressar.
+            cancelInterruptedRoll();
+        }
+
         BackgroundMusicManager.getInstance().pause();
         super.onPause();
     }
 
-    // Reavalia a penalização anti-batota ao regressar à aplicação.
+    // Retoma o estado seguro da sessão, sem reaproveitar resultados de um lançamento interrompido.
     @Override
     protected void onResume() {
         super.onResume();
+        activityResumed = true;
         BackgroundMusicManager.getInstance().resumeIfEnabled(this);
 
-        if (gameSession != null) {
-            GameState before = gameSession.getState();
-            gameSession.notifyAppRestored();
-
-            if (before == GameState.PLAYING_QUESTION
-                    && gameSession.getState() != GameState.PLAYING_QUESTION) {
-                if (questionTimer != null) {
-                    questionTimer.cancel();
-                }
-                continueAfterAnswer();
+        if (!lifecyclePaused || gameSession == null) {
+            // Recupera um evento de sensor recebido durante a transição inicial da Activity.
+            if (sensorNeedsResume && gameSession != null) {
+                sensorNeedsResume = false;
+                gameSession.listenForNextRoll();
             }
+            return;
+        }
+        lifecyclePaused = false;
+
+        GameState stateBeforeRestore = gameSession.getState();
+        long awayDurationMs = pauseStartedAtElapsedRealtime == 0L
+                ? 0L
+                : SystemClock.elapsedRealtime() - pauseStartedAtElapsedRealtime;
+        pauseStartedAtElapsedRealtime = 0L;
+
+        // A saída prolongada durante uma pergunta continua a aplicar a regra anti-batota existente.
+        gameSession.notifyAppRestored();
+        GameState restoredState = gameSession.getState();
+
+        if (restoredState == GameState.PLAYING_QUESTION) {
+            if (stateBeforeRestore == GameState.PLAYING_QUESTION) {
+                // O relógio não executa callbacks em segundo plano; desconta-se o tempo decorrido.
+                int elapsedSeconds = (int) ((awayDurationMs + 999L) / 1000L);
+                secondsRemaining = Math.max(0, secondsRemaining - elapsedSeconds);
+                if (secondsRemaining == 0) {
+                    handleQuestionTimeout();
+                } else {
+                    TextView timer = findViewById(R.id.questionTimer);
+                    if (timer != null) {
+                        startQuestionTimer(timer, secondsRemaining);
+                    }
+                }
+            }
+            return;
+        }
+
+        if (restoredState == GameState.WAITING_FOR_ROLL) {
+            showRollScreen();
+            gameSession.listenForNextRoll();
+            sensorNeedsResume = false;
+        } else if (restoredState == GameState.IN_BREAK) {
+            // Recomeça o resumo completo; o tempo não avança enquanto o ecrã está bloqueado.
+            showSummary();
+        } else if (restoredState == GameState.FINISHED) {
+            showFinishedMessage();
         }
     }
 
-    // Liberta o sensor, os temporizadores e a thread de rede ao fechar.
+    // Cancela tarefas, efeitos e sensores para impedir callbacks depois de a Activity fechar.
     @Override
     protected void onDestroy() {
+        activityResumed = false;
+        ++rollAttemptId;
+        cancelIdlePrompt();
+
         if (screenTimer != null) {
             screenTimer.cancel();
         }
@@ -673,12 +904,20 @@ public class GameActivity extends AppCompatActivity implements GameSessionListen
         if (gameSession != null) {
             gameSession.dispose();
         }
+        if (questionLoadTask != null) {
+            questionLoadTask.cancel(true);
+            questionLoadTask = null;
+        }
+        if (questionRepository != null) {
+            questionRepository.cancelPendingRequests();
+        }
         if (feedbackEffects != null) {
             feedbackEffects.release();
         }
 
         networkExecutor.shutdownNow();
         feedbackHandler.removeCallbacksAndMessages(null);
+        idlePromptHandler.removeCallbacksAndMessages(null);
 
         super.onDestroy();
     }

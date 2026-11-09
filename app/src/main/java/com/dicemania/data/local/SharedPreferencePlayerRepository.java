@@ -52,4 +52,14 @@ public class SharedPreferencePlayerRepository implements PlayerRepository {
 
         return new Player(id, nickname, 0);
     }
+
+    /**
+     * Termina a sessão local sem apagar as preferências de áudio ou os recordes.
+     */
+    public void clearLocalPlayer() {
+        preferences.edit()
+                .remove(KEY_ID)
+                .remove(KEY_NICKNAME)
+                .apply();
+    }
 }

@@ -17,6 +17,10 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class RetrofitQuestionRepository implements QuestionRepository {
 
     private OpenTDBapi api; // é uma varivel do ficheiro OpenTDBapi que vai guardar a ligaçao á internet já configurada com a interface - ver ficheiro openTDBapi
+    // Mantém referência ao pedido síncrono para o poder cancelar ao bloquear o ecrã.
+    private volatile Call<OpenTDBresponse> activeQuestionCall;
+    // Impede que uma tarefa atrasada inicie um novo pedido depois de ser cancelada.
+    private boolean requestsCancelled;
 
     // 1. CONSTRUTOR: Arrancar o Motor do Retrofit e definir a Morada Principal
     public RetrofitQuestionRepository() { // cria-se um construtor para que cada variavel api tenha o formato e conteudos necessários para que o ficheiro gameSession tenha tudo o necessario para funcionar, quando este for passado para lá
@@ -77,9 +81,26 @@ public class RetrofitQuestionRepository implements QuestionRepository {
             //Api.getQuestions: a variavel vai executar a fucnçao getQuestions, do ficheiro openTDBapi
             //(amount, categoryId, typeString): sao os valores recebidos pelo jogo, pelo usuário quando joga. Aqui o retrofit meterá tudo disto no link e vai procurar na pagina da OpenTDB, na morada, para poder buscar cada uma dessas variáveis.
 
+            synchronized (this) {
+                // A tarefa pode ter começado ao mesmo tempo que o ecrã foi bloqueado.
+                if (requestsCancelled) {
+                    return perguntasProntas;
+                }
+                activeQuestionCall = chamada;
+            }
 
-            Response<OpenTDBresponse> resposta = chamada.execute(); // A ação de execução da chamada, telemóvel para buscar a informaçao, vai ser executado pela variável resposta
-            //Execute() faz com que o código bloqueie. Até que o servidor nao mande tudo, as variáveis todas, ele nao vai passar a linha de código seguinte
+            Response<OpenTDBresponse> resposta;
+            try {
+                resposta = chamada.execute(); // Aguarda a resposta nesta thread de trabalho.
+            } finally {
+                // Evita que um pedido antigo apague a referência de um pedido mais recente.
+                synchronized (this) {
+                    if (activeQuestionCall == chamada) {
+                        activeQuestionCall = null;
+                    }
+                }
+            }
+            // O execute() é síncrono; a GameActivity chama este método num ExecutorService para não bloquear a UI.
             //Response<OpenTdbResponse>: Response acaba por ser uma caixa de correios da Retrofit, pois nao entrega apenas o texto do servidor, mas também o estado ou se correu bem ou nao esta execução, apresenta um relatório. Este texto todo vai ter de estar no formato instanciado no OpenTdbResponse.
 
 
@@ -89,55 +110,11 @@ public class RetrofitQuestionRepository implements QuestionRepository {
 
 
 
-                // 5. PERCORRER CADA PERGUNTA SUJA (JSON) E LIMPAR
-                for (OpenTDBresponse.QuestionJson Json : resposta.body().results) { // resposta.body().results: chama-se de method chaining, com isto é possível viajar por várias camadas de codigo sem termos de criar váras variaveis temporais
-                    //resposta: a varaivel de cima que contem os dados ja enviados pela API, a tal chamada
-                    //.body(): acede aos conteudos que recebeu a variavel resposta da net
-                    //.results: Ao abrir o objeto da openTDBresponse e vai diretemeente a variavel results que está definido como o nome da List<QuestionJson> definida no ficheiro openTDBresponse
-
-                    //QuestionJson: é a propria classe que criamos no ficheiro openTDBresponse, sendo esta o molde de como devem vir as peeguntas sem formataçao, sujas, da net (com as tais etiquetas @SerializedName correctAnswer,... )
-                    //for: por cada pergunta do tipo Json faz o seguinte
-
-
-                    // Juntar todas as opções
-                    List<String> respostasMisturadas = new ArrayList<>(); //criamos uma nova lista dinamica de objetos do tipo string chamada de todasAsRespostas
-                    //serve para guardar todas as respostas, vindas da net alocadas no Json, independentemente da ordem das mesmas ou se sao verdadeiras ou falsas. Todo entra no mesmo saco
-                    // como esta no ciclo for, o java criará uma lista nova e limpa para cada uma das perguntas
-
-                    respostasMisturadas.add(Json.correctAnswer); // Usa-se a lista vazia em cima e adiciona-se, vai ser inserida, e a resposta correta que vem contida no objeto Json (que tem tudo, pergunta e respostas), que tem comomolde a funçao correctAnswer do ficheiro openTDBresponse
-
-
-                    if (Json.incorrectAnswers != null) { // se o que está contido no objeto Json for as respostas incorretas
-                        respostasMisturadas.addAll(Json.incorrectAnswers); // vao ser adicionadas a lista das respostasMisturadas as respostas incorretas contidas no onjeto Json no formato incorrectAnswer do ficheiro openTDBresponse
-                    }
-
-
-
-                    // 6. O BARALHADOR: Troca a posição da resposta certa aleatoriamente!
-                    Collections.shuffle(respostasMisturadas); // o Collections e o shuffle vem da propria biblioteca do java (java.util)
-                    //Collectiosn:è como uma caixa de ferramentas. Ele só guarda comandos para a manipulaçao das listas, por exemplo tem ferramentas especificas como ordenar alfabeticamente (sort()), virar ao contrário (reverse()), maior valor (max()), baralhar (shuffle()), ...
-                    // .shuffle: é uma das ferramentas do Collections que vai baralhar todo o que está dentro da lista das respostasMisturadas
-
-
-
-                    // 7. CONSTRUIR O MOLDE PURO DO TEU JOGO
-                    // (Nota: Ajusta esta linha se o construtor da tua classe Question for diferente)
-                    Question perguntaLimpa = new Question( // Question: é a classe do ficheiro Question (molde perfeito que mostra como uma pergunta deve ser dentro do universo), um texto, lista de opçoes e apresentar a certa.
-                            // cria-se um objeto do tipo Question chamado perguntaLimpa e esta vai chamar ao construtor criado no ficheiro Question para que crie uma questao com os parametros qeu tiver nos parentesis
-
-                            category,
-
-                            type,
-
-                            Json.question, //tira-se só o texto da questao
-
-                            Json.correctAnswer, // Passamos a resposta certa para o jogo saber quem ganha
-
-                            respostasMisturadas // tem todas as respostas já baralhadas
-
-                    );
-
-                    perguntasProntas.add(perguntaLimpa); // pegamos na lista que fizemos em cima, antes de começarmos com o loop, e vamos colocar-lhe o pacote de perguntas completo, perguntas, opçoes e a resposta correta
+                // 5. PERCORRER CADA PERGUNTA DO DTO E CONVERTÊ-LA EM MODELO DO DOMÍNIO
+                for (OpenTDBresponse.QuestionJson Json : resposta.body().results) {
+                    // A função testada também compõe e baralha as opções da pergunta.
+                    Question perguntaLimpa = mapQuestion(category, type, Json);
+                    perguntasProntas.add(perguntaLimpa);
                 }
             }
         } catch (Exception e) {
@@ -147,6 +124,52 @@ public class RetrofitQuestionRepository implements QuestionRepository {
         }
 
         return perguntasProntas; // devolvem-se todas as perguntas
+    }
+
+    // Interrompe a ligação HTTP ativa quando o lançamento é suspenso pelo ciclo de vida Android.
+    @Override
+    public void cancelPendingRequests() {
+        Call<OpenTDBresponse> call;
+        synchronized (this) {
+            requestsCancelled = true;
+            call = activeQuestionCall;
+        }
+        if (call != null) {
+            call.cancel();
+        }
+    }
+
+    // Reabre o acesso à API quando o jogador regressa e pode iniciar outro lançamento.
+    @Override
+    public synchronized void resumeRequests() {
+        requestsCancelled = false;
+    }
+
+    // Converte o DTO recebido da OpenTDB num modelo do domínio e baralha as opções.
+    // O acesso package-private permite testar esta transformação sem aceder à Internet.
+    static Question mapQuestion(
+            Category category,
+            QuestionType type,
+            OpenTDBresponse.QuestionJson Json
+    ) {
+        List<String> respostasMisturadas = new ArrayList<>();
+        respostasMisturadas.add(Json.correctAnswer);
+
+        // Algumas respostas podem não incluir uma lista de opções incorretas.
+        if (Json.incorrectAnswers != null) {
+            respostasMisturadas.addAll(Json.incorrectAnswers);
+        }
+
+        // A ordem aleatória evita que a resposta correta fique sempre na mesma posição.
+        Collections.shuffle(respostasMisturadas);
+
+        return new Question(
+                category,
+                type,
+                Json.question,
+                Json.correctAnswer,
+                respostasMisturadas
+        );
     }
 
     // Método auxiliar (Alfândega) para converter os Enums do jogo nos números da OpenTDB

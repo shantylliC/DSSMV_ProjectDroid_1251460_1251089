@@ -168,6 +168,11 @@ public class GameSession implements ShakeCallback { // variaveis privadas, intoc
         if (state == GameState.PLAYING_QUESTION) {
             antiCheatTimer.markAppMinimized();
         }
+
+        // O acelerómetro não deve continuar a receber eventos fora do ecrã do jogo.
+        if (shakeSensor != null) {
+            shakeSensor.stopListening();
+        }
     }
 
     //Verifica se o jogador excedeu o limite permitido fora da aplicação.
